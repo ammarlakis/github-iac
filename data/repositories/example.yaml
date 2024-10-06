@@ -3,3 +3,16 @@ visibility: private
 topics:
   - terraform
   - automation
+permissions:
+  users:
+    pull: []
+    push: []
+    maintain: []
+    triage: []
+    admin: []
+  teams:
+    pull: []
+    push: []
+    maintain: []
+    triage: []
+    admin: []

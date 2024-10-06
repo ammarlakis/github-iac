@@ -90,6 +90,25 @@ visibility: <public|private>      # Required: Whether the repository is private 
 topics:                           # Optional: List of topics to categorize the repository
   - <topic-1>
   - <topic-2>
+permissions:                      # Optional: List of permissions assigned to users and teams
+  users:
+    pull: 
+      - <user-1_id>
+      - <user-2_id>
+    push:
+      - <user-3_id>
+    maintain: []
+    triage: []
+    admin: []
+  teams:
+    pull:
+      - <team-1_id>
+    push: []
+    maintain: []
+    triage: []
+    admin:
+      - <team-2_id>
+      - <team-3_id>
 ```
 
 ### Future Enhancements
