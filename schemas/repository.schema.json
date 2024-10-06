@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string",
+      "description": "A description of the repository"
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "private",
+        "public",
+        "internal"
+      ],
+      "description": "The visibility level of the repository"
+    },
+    "topics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "A list of topics related to the repository"
+    },
+    "permissions": {
+      "type": "object",
+      "properties": {
+        "users": {
+          "type": "object",
+          "properties": {
+            "pull": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "User ids with pull permissions"
+            },
+            "push": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "User ids with push permissions"
+            },
+            "maintain": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "User ids with maintain permissions"
+            },
+            "triage": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "User ids with triage permissions"
+            },
+            "admin": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "User ids with admin permissions"
+            }
+          }
+        },
+        "teams": {
+          "type": "object",
+          "properties": {
+            "pull": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Team ids with pull permissions"
+            },
+            "push": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Team ids with push permissions"
+            },
+            "maintain": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Team ids with maintain permissions"
+            },
+            "triage": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Team ids with triage permissions"
+            },
+            "admin": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Team ids with admin permissions"
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "visibility"
+  ],
+  "additionalProperties": false
+}

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This project automates the provisioning and management of GitHub resources using Terraform. Initially, the focus is on creating GitHub repositories, but the project will be extended to manage teams and organization memberships as well. Resources are defined in YAML files for simplicity and flexibility, allowing easy updates, tracking, and ability to enforce policies later using [OPA](https://www.openpolicyagent.org/docs/latest/terraform/).
+This project automates the provisioning and management of GitHub resources using Terraform. Initially, the focus is on creating GitHub repositories, but the project will be extended to manage teams and organization memberships as well. Resources are defined in YAML files for simplicity and flexibility, allowing easy updates, tracking, and the ability to enforce policies later using [OPA](https://www.openpolicyagent.org/docs/latest/terraform/).
 
 ### Project Structure
 
@@ -10,11 +10,16 @@ This project automates the provisioning and management of GitHub resources using
   
 - **data/repositories/**: Contains YAML files representing the GitHub resources to be provisioned. Each YAML file describes a GitHub repository, with the file name matching the repository name.
 
+- **schemas/**: Contains JSON schemas used to validate the YAML files in the `data/` folder. These schemas ensure that the structure of the YAML files is correct before applying changes with Terraform. For example, `repository.schema.json` validates the structure of the repository YAML files.
+
+- **.vscode/**: Contains configuration settings for Visual Studio Code to support automatic YAML validation using the schemas in the `schemas/` folder.
+
 ## Prerequisites
 
 - [Terraform CLI](https://www.terraform.io/downloads.html)
 - [GitHub Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) with appropriate permissions for managing repositories, teams, and organization memberships.
 - Your GitHub organization name or username.
+- (Optional) [YAML Extension for VSCode](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) for automatic YAML validation using the provided schemas.
 
 ## Setup Instructions
 
@@ -31,7 +36,7 @@ export GITHUB_ORG=your_organization_name   # Or your GitHub username if you're n
 
 Each YAML file in the `data/repositories/` folder represents a GitHub repository. The name of the YAML file should match the repository name you want to create.
 
-For example, to create a repository called `my-awesome-repo`, create a file named `my-awesome-repo.yaml` in the `data/` folder with the following content:
+For example, to create a repository called `my-awesome-repo`, create a file named `my-awesome-repo.yaml` in the `data/repositories/` folder with the following content:
 
 ```yaml
 description: "This is an awesome repository"
@@ -43,7 +48,15 @@ topics:
 
 The YAML files can be easily updated to reflect changes to the repositories you want to manage, such as updating descriptions, visibility, and topics.
 
-### 3. Running Terraform
+### 3. YAML Validation with VSCode
+
+For those using Visual Studio Code, automatic validation of the YAML files is supported via the [YAML Extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml). Once the extension is installed, the `.vscode/settings.json` file is configured to validate all YAML files in the `data/repositories/` folder against the `repository.schema.json` schema found in the `schemas/` folder.
+
+To validate the YAML files, make sure you have the extension installed and VSCode will automatically highlight any validation errors in the `data/repositories/` files.
+
+Another way to validate the YAML files is using [ajv-cli](https://github.com/ajv-validator/ajv-cli).
+
+### 4. Running Terraform
 
 1. Navigate to the `src/` directory:
    ```bash
@@ -60,7 +73,7 @@ The YAML files can be easily updated to reflect changes to the repositories you 
    terraform apply
    ```
 
-   Terraform will read the YAML files in the `data/` folder, provision the corresponding repositories, and store the state accordingly.
+   Terraform will read the YAML files in the `data/repositories/` folder, provision the corresponding repositories, and store the state accordingly.
 
 ### Folder Structure
 
@@ -77,6 +90,10 @@ The YAML files can be easily updated to reflect changes to the repositories you 
 │   └── repositories
 │       ├── my-awesome-repo.yaml    # YAML file representing a GitHub repository
 │       └── another-repo.yaml       # YAML file for another repository
+├── schemas/
+│   └── repository.schema.json      # JSON schema for validating repository YAML files
+├── .vscode/
+│   └── settings.json               # VSCode settings for YAML validation
 └── README.md                       # Project documentation
 ```
 
@@ -115,4 +132,3 @@ permissions:                      # Optional: List of permissions assigned to us
 
 - **GitHub Teams**: Define teams and their permissions in YAML files and provision them via Terraform.
 - **Organization Membership**: Automate the management of organization members and their roles.
-- **Data Files Schema**: Add JSON schema to allow data validation.
