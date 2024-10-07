@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GitHub Team",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string",
+      "description": "A short description of the team"
+    },
+    "privacy": {
+      "type": "string",
+      "enum": ["closed", "secret"],
+      "default": "closed",
+      "description": "Privacy level of the team. Either 'closed' or 'secret'."
+    },
+    "membership": {
+      "type": "object",
+      "properties": {
+        "maintainers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of team maintainers"
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of team members"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

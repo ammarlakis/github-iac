@@ -6,5 +6,10 @@ locals {
 
   {% if organization %}
   membership = yamldecode(file("${path.module}/../data/membership.yaml"))
+
+  teams = {
+    for file in fileset("${path.module}/../data/teams", "*.yaml") :
+    trimsuffix(file, ".yaml") => yamldecode(file("${path.module}/../data/teams/${file}"))
+  }
   {% endif %}
 }

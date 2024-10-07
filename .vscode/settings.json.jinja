@@ -1,6 +1,9 @@
 {
   "yaml.schemas": {
     "./schemas/repository.schema.json": "data/repositories/**.yaml",
+    {% if organization %}
     "./schemas/membership.schema.json": "data/membership.yaml",
+    "./schemas/team.schema.json": "data/teams/**.yaml"
+    {% endif %}
   }
 }

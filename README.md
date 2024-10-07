@@ -8,7 +8,9 @@ This project automates the provisioning and management of GitHub resources using
 
 - **src/**: This folder contains the Terraform code that defines how GitHub resources are provisioned. The code reads from the `data/` folder to create the necessary resources.
   
-- **data/repositories/**: Contains YAML files representing the GitHub resources to be provisioned. Each YAML file describes a GitHub repository, with the file name matching the repository name.
+- **data/repositories/**: Contains YAML files representing the repositories to be provisioned. Each YAML file describes a GitHub repository, with the file name matching the repository name.
+
+- **data/teams/**: Contains YAML files representing the teams to be provisioned. Each YAML file describes a GitHub team, with the file name matching the team name.
 
 - **data/membership.yaml**: A YAML file that assigns users to roles in the organization.
 
@@ -31,10 +33,14 @@ This project automates the provisioning and management of GitHub resources using
 │   ├── repositories                
 │   │   ├── my-awesome-repo.yaml    # YAML file representing a GitHub repository
 │   │   └── another-repo.yaml       # YAML file for another repository
+│   ├── teams                
+│   │   ├── team-rocket.yaml        # YAML file representing a GitHub team
+│   │   └── team-plasma.yaml        # YAML file for a better team
 │   └── membership.yaml             # YAML file containing organization membership assignment
 ├── schemas/
 │   ├── repository.schema.json      # JSON schema for validating repository YAML files
-│   └── repository.schema.json      # JSON schema for validating membership YAML file
+│   ├── membership.schema.json      # JSON schema for validating membership YAML file
+│   └── team.schema.json            # JSON schema for validating team YAML files
 ├── .vscode/
 │   └── settings.json               # VSCode settings for YAML validation
 └── README.md                       # Project documentation
@@ -101,6 +107,23 @@ members:
   - yamanlk
 ```
 
+#### Teams
+
+To create a team, create a new YAML file under `data/teams` where the name of the file is the name of the team.
+
+For example, to create a team called `team-rocket`, create a file named `team-rocket.yaml` in the `data/teams/` folder with the following contents:
+
+```yaml
+description: "Prepare for trouble! And make it double!"
+privacy: "secret"
+membership:
+  maintainers:
+    - ammarlakis
+  members:
+    - yamanlk
+
+```
+
 ### 4. YAML Validation with VSCode
 
 For Visual Studio Code users, automatic validation of YAML files is supported through the [YAML Extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml). Once the extension is installed, the `.vscode/settings.json` file is configured to validate all YAML files in the `data/` folder against the relevant schema found in the `schemas/` folder. Simply install the extension, and VSCode will automatically highlight any validation errors in your YAML files.
@@ -127,7 +150,7 @@ Alternatively, you can manually validate YAML files using the [ajv-cli](https://
    terraform apply
    ```
 
-   Terraform will read the YAML files in the `data/` folder, provision the corresponding repositories, assign users membership, and store the state accordingly.
+   Terraform will read the YAML files in the `data/` folder, provision the corresponding repositories and teams, assign users membership, and store the state accordingly.
 
 ### Future Enhancements
 
