@@ -3,7 +3,6 @@ resource "github_repository" "create" {
 
   name = each.key
 
-  archive_on_destroy = false
   visibility  = each.value.visibility
   description = each.value.description
   topics      = each.value.topics

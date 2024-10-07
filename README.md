@@ -18,21 +18,35 @@ This project automates the provisioning and management of GitHub resources using
 
 - [Terraform CLI](https://www.terraform.io/downloads.html)
 - [GitHub Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) with appropriate permissions for managing repositories, teams, and organization memberships.
-- Your GitHub organization name or username.
+- [Copier](https://copier.readthedocs.io/en/stable/) to copy this template.
 - (Optional) [YAML Extension for VSCode](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) for automatic YAML validation using the provided schemas.
 
 ## Setup Instructions
 
-### 1. Configure GitHub Authentication
+### 1. Provisioning the Template
+
+To use this project template, you can copy it using Copier:
+
+```bash
+copier copy https://github.com/ammarlakis/github-iac myproject/
+```
+
+### 2. Configure GitHub Authentication
 
 Before running Terraform, set up authentication with GitHub by exporting your Personal Access Token as an environment variable:
 
 ```bash
 export GITHUB_TOKEN=your_personal_access_token
-export GITHUB_ORG=your_organization_name   # Or your GitHub username if you're not using an org
 ```
 
-### 2. Define Resources in YAML (`data/`)
+Alternatively, you can authenticate using the [GitHub CLI](https://cli.github.com/):
+```
+gh auth login
+```
+
+In deployment pipelines, it's recommended to use [GitHub App authentication](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/making-authenticated-api-requests-with-a-github-app-in-a-github-actions-workflow).
+
+### 3. Define Resources in YAML (`data/`)
 
 Each YAML file in the `data/repositories/` folder represents a GitHub repository. The name of the YAML file should match the repository name you want to create.
 
@@ -48,27 +62,28 @@ topics:
 
 The YAML files can be easily updated to reflect changes to the repositories you want to manage, such as updating descriptions, visibility, and topics.
 
-### 3. YAML Validation with VSCode
+### 4. YAML Validation with VSCode
 
-For those using Visual Studio Code, automatic validation of the YAML files is supported via the [YAML Extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml). Once the extension is installed, the `.vscode/settings.json` file is configured to validate all YAML files in the `data/repositories/` folder against the `repository.schema.json` schema found in the `schemas/` folder.
+For Visual Studio Code users, automatic validation of YAML files is supported through the [YAML Extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml). Once the extension is installed, the `.vscode/settings.json` file is configured to validate all YAML files in the `data/repositories/` folder against the `repository.schema.json` schema found in the `schemas/` folder. Simply install the extension, and VSCode will automatically highlight any validation errors in your YAML files.
 
-To validate the YAML files, make sure you have the extension installed and VSCode will automatically highlight any validation errors in the `data/repositories/` files.
+Alternatively, you can manually validate YAML files using the [ajv-cli](https://github.com/ajv-validator/ajv-cli).
 
-Another way to validate the YAML files is using [ajv-cli](https://github.com/ajv-validator/ajv-cli).
-
-### 4. Running Terraform
+### 5. Running Terraform
 
 1. Navigate to the `src/` directory:
+
    ```bash
    cd src/
    ```
 
 2. Initialize Terraform:
+
    ```bash
    terraform init
    ```
 
 3. Apply the configuration to provision the repositories:
+
    ```bash
    terraform apply
    ```
