@@ -151,7 +151,3 @@ Alternatively, you can manually validate YAML files using the [ajv-cli](https://
    ```
 
    Terraform will read the YAML files in the `data/` folder, provision the corresponding repositories and teams, assign users membership, and store the state accordingly.
-
-### Future Enhancements
-
-- **GitHub Teams**: Define teams and their permissions in YAML files and provision them via Terraform.
