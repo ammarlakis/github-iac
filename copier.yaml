@@ -1,3 +1,7 @@
 github_owner:
     type: str
     help: Who is the github owner of this project? It's either a username of an organization ID.
+organization:
+    type: bool
+    default: false
+    help: Is this project for managing an organization?

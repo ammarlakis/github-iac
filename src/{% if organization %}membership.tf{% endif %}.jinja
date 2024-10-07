@@ -1,0 +1,13 @@
+resource "github_membership" "admin" {
+  for_each = toset(local.membership.admins)
+
+  username = each.value
+  role     = "admin"
+}
+
+resource "github_membership" "member" {
+  for_each = toset(local.membership.members)
+
+  username = each.value
+  role     = "member"
+}

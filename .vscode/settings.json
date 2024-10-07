@@ -1,5 +1,6 @@
 {
   "yaml.schemas": {
-    "./schemas/repository.schema.json": "data/repositories/**.yaml"
+    "./schemas/repository.schema.json": "data/repositories/**.yaml",
+    "./schemas/membership.schema.json": "data/membership.yaml",
   }
 }

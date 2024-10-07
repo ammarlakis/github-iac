@@ -3,4 +3,8 @@ locals {
     for file in fileset("${path.module}/../data/repositories", "*.yaml") :
     trimsuffix(file, ".yaml") => yamldecode(file("${path.module}/../data/repositories/${file}"))
   }
+
+  {% if organization %}
+  membership = yamldecode(file("${path.module}/../data/membership.yaml"))
+  {% endif %}
 }
