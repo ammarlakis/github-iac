@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This project automates the provisioning and management of GitHub resources using Terraform. Resources are defined in YAML files for simplicity and flexibility, allowing easy updates, tracking, and the ability to enforce policies later using [OPA](https://www.openpolicyagent.org/docs/latest/terraform/).
+This project automates the provisioning and management of GitHub resources using Terraform. Resources are defined in YAML files for simplicity and flexibility, allowing easy updates, tracking, and the ability to extend the logic around managing these files.
 
 ### Project Structure
 
@@ -151,3 +151,38 @@ Alternatively, you can manually validate YAML files using the [ajv-cli](https://
    ```
 
    Terraform will read the YAML files in the `data/` folder, provision the corresponding repositories and teams, assign users membership, and store the state accordingly.
+
+## Future Improvements
+
+1. **Enhanced Security and Compliance**:
+   - Implement [Open Policy Agent (OPA)](https://www.openpolicyagent.org/) to enforce security and compliance policies on resources before they are created.
+   
+2. **Additional Resource Types**:
+   - Extend support to manage other GitHub resources like Applications.
+
+3. **GitHub App Authentication**:
+   - Improve automation in CI/CD pipelines by integrating GitHub App authentication, enhancing security and reducing reliance on personal tokens.
+
+4. **CI/CD Integration**:
+   - Integrate a CI/CD pipeline to automatically validate YAML structure and apply Terraform changes when files are updated.
+
+5. **Resource Diffing and Drift Detection**:
+   - Add logic to detect and report configuration drift, notifying when resources in GitHub differ from the expected state in Terraform.
+
+6. **Better Error Handling and Logging**:
+   - Enhance error messages and logs for better debugging and monitoring, possibly integrating with monitoring tools.
+
+7. **Template Management**:
+   - Use a templating tool like [Copier](https://copier.readthedocs.io/en/stable/) to enable users to create new projects with this template and customize resources based on pre-defined configurations.
+
+## License
+
+This project is licensed under the MIT License.
+
+## Support Me
+
+I create open-source code and write articles on [my website](https://ammarlakis.com) and [GitHub](https://github.com/ammarlakis), covering topics like automation, platform engineering, and smart home technology.
+
+If you’d like to support my work (or treat my cat to a tuna can!), you can do so here:
+
+[![Buy my cat a tuna can 😸](https://img.buymeacoffee.com/button-api/?text=Buy%20my%20cat%20a%20tuna%20can&emoji=%F0%9F%98%B8&slug=ammarlakis&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://www.buymeacoffee.com/ammarlakis)
