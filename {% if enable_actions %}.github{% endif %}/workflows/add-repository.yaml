@@ -1,0 +1,107 @@
+name: Add GitHub Repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      name: 
+        description: The repository name
+        type: string
+        required: true
+      description: 
+        description: The repository description
+        type: string
+        required: false
+      visibility:
+        description: The visibility settings of the repository
+        type: choice
+        options:
+          - private
+          - public
+          - internal
+        required: true
+      topics:
+        description: Space-separated list of topics
+        type: string
+        required: false
+      permissions:
+        description: Permissions assignment (formatted as JSON). Refer to the schema repository#permissions for specs
+        type: string
+        required: false
+
+permissions: 
+  contents: write
+
+jobs:
+  AddRepository:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install yq
+        uses: dcarbone/install-yq-action@v1.1.1
+
+      - name: Generate Repository YAML
+        run: |
+          # Start the YAML content
+          yaml_content=""
+
+          # description
+          if [ -n "${{ inputs.description }}" ]; then
+            yaml_content+="description: \"${{ inputs.description }}\"\n"
+          fi
+
+          # visibility
+          if [ -n "${{ inputs.visibility }}" ]; then
+            yaml_content+="visibility: \"${{ inputs.visibility }}\"\n"
+          fi
+
+          # topics
+          if [ -n "${{ inputs.topics }}" ]; then
+            yaml_content+="topics:\n"
+            for topic in ${{ inputs.topics }}; do
+              yaml_content+="  - $topic\n"
+            done
+          fi
+
+          # permissions
+          if [ -n "${{ inputs.permissions }}" ]; then
+            echo "${{ inputs.permissions }}" | yq eval -P | sed 's/^/  /' > permissions.yaml
+            permissions_yaml=$(cat permissions.yaml)
+            yaml_content+="permissions:\n${permissions_yaml}\n"
+          fi
+
+          echo -e "$yaml_content" > data/repositories/${{ inputs.name }}.yaml
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          git add data/repositories/${{ inputs.name }}.yaml
+
+          # Check if there are any changes to commit and set output accordingly
+          if [ -n "$(git diff --cached)" ]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure Git
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Commit changes
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git commit -m "Deleting repository ${{ inputs.name }}"
+
+      - name: Set up Git Remote with GITHUB_TOKEN
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+
+      - name: Push changes
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git push origin
