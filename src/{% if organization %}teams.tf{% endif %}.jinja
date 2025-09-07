@@ -2,7 +2,7 @@ resource "github_team" "team" {
   for_each = local.teams
 
   name        = each.key
-  description = each.value.description
+  description = try(each.value.description, "")
   privacy     = each.value.privacy
 }
 
@@ -13,14 +13,18 @@ resource "github_team_members" "members" {
   team_id  = github_team.team[each.key].id
 
   dynamic "members" {
-    for_each = each.value.membership.members
-    username = members.value
-    role     = "member"
+    content {
+      for_each = each.value.membership.members
+      username = members.value
+      role     = "member"
+    }
   }
 
   dynamic "members" {
-    for_each = each.value.membership.maintainers
-    username = members.value
-    role     = "maintainer"
+    content {
+      for_each = each.value.membership.maintainers
+      username = members.value
+      role     = "maintainer"
+    }
   }
 }
