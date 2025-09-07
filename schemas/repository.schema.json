@@ -107,6 +107,11 @@
           }
         }
       }
+    },
+    "pages": {
+      "type": "boolean",
+      "description": "Enable pages",
+      "default": false
     }
   },
   "required": [

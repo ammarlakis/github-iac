@@ -4,8 +4,21 @@ resource "github_repository" "create" {
   name = each.key
 
   visibility  = each.value.visibility
-  description = each.value.description
-  topics      = each.value.topics
+  description = try(each.value.description, "")
+  topics      = try(each.value.topics, [])
+  has_issues  = true
+
+  dynamic "pages" {
+    for_each = try(each.value.pages, false) ? [true] : []
+    content {
+      build_type = "workflow"
+
+      source {
+          branch = "master"
+          path   = "/"
+      }
+    }
+  }
 }
 
 resource "github_repository_collaborators" "users" {
@@ -93,5 +106,5 @@ resource "github_repository_collaborators" "users" {
     }
   }
 
-  depends_on = [ github_repository.create ]
+  depends_on = [github_repository.create]
 }
