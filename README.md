@@ -7,7 +7,6 @@ This project automates the provisioning and management of GitHub resources using
 ### Project Structure
 
 - **src/**: This folder contains the Terraform code that defines how GitHub resources are provisioned. The code reads from the `data/` folder to create the necessary resources.
-  
 - **data/repositories/**: Contains YAML files representing the repositories to be provisioned. Each YAML file describes a GitHub repository, with the file name matching the repository name.
 
 - **data/teams/**: Contains YAML files representing the teams to be provisioned. Each YAML file describes a GitHub team, with the file name matching the team name.
@@ -30,10 +29,10 @@ This project automates the provisioning and management of GitHub resources using
 │   ├── terraform.tf
 │   └── variables.tf
 ├── data/
-│   ├── repositories                
+│   ├── repositories
 │   │   ├── my-awesome-repo.yaml    # YAML file representing a GitHub repository
 │   │   └── another-repo.yaml       # YAML file for another repository
-│   ├── teams                
+│   ├── teams
 │   │   ├── team-rocket.yaml        # YAML file representing a GitHub team
 │   │   └── team-plasma.yaml        # YAML file for a better team
 │   └── membership.yaml             # YAML file containing organization membership assignment
@@ -63,7 +62,32 @@ To use this project template, you can copy it using Copier:
 copier copy https://github.com/ammarlakis/github-iac myproject/
 ```
 
-### 2. Configure GitHub Authentication
+During the setup, you'll be asked several questions:
+
+- **github_owner**: Your GitHub username or organization name
+- **organization**: Whether this is for managing an organization (enables teams and membership management)
+- **enable_actions**: Whether to create GitHub Actions workflows
+- **import_existing**: Whether to import existing repositories from your GitHub account/organization
+
+### 2. Importing Existing Repositories
+
+If you choose to import existing repositories during setup, the template will include Terraform configuration that:
+
+1. Uses the `github_repositories` data source to fetch all active repositories (excluding archived and forked repos)
+2. Uses Terraform's native `import` blocks to import existing repositories into state
+3. Generates YAML configuration files for each repository under `data/repositories/`
+
+After the template is generated, run the following commands to complete the import:
+
+```bash
+cd myproject/src
+terraform init
+terraform apply  # This will import existing repos and generate YAML files
+```
+
+After the initial import, you can remove the `import.tf` and `import_generate.tf` files from the `src/` directory since they are only needed for the initial setup. The generated YAML files will remain and can be modified as needed.
+
+### 3. Configure GitHub Authentication
 
 Before running Terraform, set up authentication with GitHub by exporting your Personal Access Token as an environment variable:
 
@@ -72,13 +96,14 @@ export GITHUB_TOKEN=your_personal_access_token
 ```
 
 Alternatively, you can authenticate using the [GitHub CLI](https://cli.github.com/):
+
 ```
 gh auth login
 ```
 
 In deployment pipelines, it's recommended to use [GitHub App authentication](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/making-authenticated-api-requests-with-a-github-app-in-a-github-actions-workflow).
 
-### 3. Define Resources in YAML (`data/`)
+### 4. Define Resources in YAML (`data/`)
 
 #### Repositories
 
@@ -121,16 +146,15 @@ membership:
     - ammarlakis
   members:
     - yamanlk
-
 ```
 
-### 4. YAML Validation with VSCode
+### 5. YAML Validation with VSCode
 
 For Visual Studio Code users, automatic validation of YAML files is supported through the [YAML Extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml). Once the extension is installed, the `.vscode/settings.json` file is configured to validate all YAML files in the `data/` folder against the relevant schema found in the `schemas/` folder. Simply install the extension, and VSCode will automatically highlight any validation errors in your YAML files.
 
 Alternatively, you can manually validate YAML files using the [ajv-cli](https://github.com/ajv-validator/ajv-cli).
 
-### 5. Running Terraform
+### 6. Running Terraform
 
 1. Navigate to the `src/` directory:
 
@@ -156,20 +180,24 @@ Alternatively, you can manually validate YAML files using the [ajv-cli](https://
 
 1. **Enhanced Security and Compliance**:
    - Implement [Open Policy Agent (OPA)](https://www.openpolicyagent.org/) to enforce security and compliance policies on resources before they are created.
-   
 2. **Additional Resource Types**:
+
    - Extend support to manage other GitHub resources like Applications.
 
 3. **GitHub App Authentication**:
+
    - Improve automation in CI/CD pipelines by integrating GitHub App authentication, enhancing security and reducing reliance on personal tokens.
 
 4. **CI/CD Integration**:
+
    - Integrate a CI/CD pipeline to automatically validate YAML structure and apply Terraform changes when files are updated.
 
 5. **Resource Diffing and Drift Detection**:
+
    - Add logic to detect and report configuration drift, notifying when resources in GitHub differ from the expected state in Terraform.
 
 6. **Better Error Handling and Logging**:
+
    - Enhance error messages and logs for better debugging and monitoring, possibly integrating with monitoring tools.
 
 7. **Template Management**:

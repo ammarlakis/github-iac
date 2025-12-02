@@ -1,0 +1,27 @@
+# Fetch detailed information for each existing repository
+data "github_repository" "existing" {
+  for_each = toset(data.github_repositories.existing.names)
+  name     = each.value
+}
+
+# Generate YAML configuration files for each imported repository
+resource "local_file" "repository_yaml" {
+  for_each = data.github_repository.existing
+
+  filename = "${path.module}/../data/repositories/${each.key}.yaml"
+  content  = <<-EOT
+description: "${replace(coalesce(each.value.description, ""), "\"", "\\\"")}"
+visibility: ${each.value.visibility}
+%{if length(each.value.topics) > 0~}
+topics:
+%{for topic in each.value.topics~}
+  - ${topic}
+%{endfor~}
+%{endif~}
+EOT
+
+  lifecycle {
+    # Only create the file if it doesn't exist, don't overwrite manual changes
+    ignore_changes = [content]
+  }
+}

@@ -1,0 +1,18 @@
+# Fetch all existing repositories for the owner
+data "github_repositories" "existing" {
+  query = "{% if organization %}org:{% else %}user:{% endif %}{{ github_owner }} fork:false archived:false"
+}
+
+# Import existing repositories into terraform state
+import {
+  for_each = toset(data.github_repositories.existing.names)
+  to       = github_repository.create[each.value]
+  id       = each.value
+}
+
+# Import existing repository collaborators into terraform state
+import {
+  for_each = toset(data.github_repositories.existing.names)
+  to       = github_repository_collaborators.users[each.value]
+  id       = each.value
+}
