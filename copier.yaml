@@ -13,3 +13,7 @@ import_existing:
   type: bool
   default: false
   help: Would you like to import existing repositories from your GitHub account/organization?
+add_justfile:
+  type: bool
+  default: true
+  help: Would you like to add a Justfile to the project?
