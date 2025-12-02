@@ -10,7 +10,7 @@ resource "local_file" "repository_yaml" {
 
   filename = "${path.module}/../data/repositories/${each.key}.yaml"
   content  = <<-EOT
-description: "${replace(coalesce(each.value.description, ""), "\"", "\\\"")}"
+description: "${replace(each.value.description != null ? each.value.description : "", "\"", "\\\"")}"
 visibility: ${each.value.visibility}
 %{if length(each.value.topics) > 0~}
 topics:

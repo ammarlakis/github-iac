@@ -3,16 +3,16 @@ data "github_repositories" "existing" {
   query = "{% if organization %}org:{% else %}user:{% endif %}{{ github_owner }} fork:false archived:false"
 }
 
-# Import existing repositories into terraform state
+# Import existing repositories into terraform state (only those with YAML config)
 import {
-  for_each = toset(data.github_repositories.existing.names)
+  for_each = toset([for name in data.github_repositories.existing.names : name if contains(keys(local.repositories), name)])
   to       = github_repository.create[each.value]
   id       = each.value
 }
 
-# Import existing repository collaborators into terraform state
+# Import existing repository collaborators into terraform state (only those with YAML config)
 import {
-  for_each = toset(data.github_repositories.existing.names)
+  for_each = toset([for name in data.github_repositories.existing.names : name if contains(keys(local.repositories), name)])
   to       = github_repository_collaborators.users[each.value]
   id       = each.value
 }
