@@ -113,6 +113,10 @@
           "default": "workflow",
           "description": "The type of build (workflow or legacy)"
         },
+        "cname": {
+          "type": "string",
+          "description": "The CNAME to use for the GitHub Pages"
+        },
         "branch": {
           "type": "string",
           "default": "master",

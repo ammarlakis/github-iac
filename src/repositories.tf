@@ -12,6 +12,7 @@ resource "github_repository" "create" {
     for_each = try(each.value.pages, false) != false ? [each.value.pages] : []
     content {
       build_type = try(pages.value.build_type, "workflow")
+      cname      = try(pages.value.cname, "")
 
       source {
         branch = try(pages.value.branch, "master")
