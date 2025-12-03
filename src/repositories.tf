@@ -9,13 +9,13 @@ resource "github_repository" "create" {
   has_issues  = true
 
   dynamic "pages" {
-    for_each = try(each.value.pages, false) ? [true] : []
+    for_each = try(each.value.pages, false) != false ? [each.value.pages] : []
     content {
-      build_type = "workflow"
+      build_type = try(pages.value.build_type, "workflow")
 
       source {
-          branch = "master"
-          path   = "/"
+        branch = try(pages.value.branch, "master")
+        path   = try(pages.value.path, "/")
       }
     }
   }

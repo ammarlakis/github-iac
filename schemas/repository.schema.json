@@ -9,11 +9,7 @@
     },
     "visibility": {
       "type": "string",
-      "enum": [
-        "private",
-        "public",
-        "internal"
-      ],
+      "enum": ["private", "public", "internal"],
       "description": "The visibility level of the repository"
     },
     "topics": {
@@ -109,13 +105,29 @@
       }
     },
     "pages": {
-      "type": "boolean",
-      "description": "Enable pages",
-      "default": false
+      "type": "object",
+      "properties": {
+        "build_type": {
+          "type": "string",
+          "enum": ["workflow", "legacy"],
+          "default": "workflow",
+          "description": "The type of build (workflow or legacy)"
+        },
+        "branch": {
+          "type": "string",
+          "default": "master",
+          "description": "The branch to deploy from"
+        },
+        "path": {
+          "type": "string",
+          "enum": ["/", "/docs"],
+          "default": "/",
+          "description": "The path to deploy from (/ or /docs)"
+        }
+      },
+      "additionalProperties": false
     }
   },
-  "required": [
-    "visibility"
-  ],
+  "required": ["visibility"],
   "additionalProperties": false
 }
