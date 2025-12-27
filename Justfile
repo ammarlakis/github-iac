@@ -1,3 +1,6 @@
+_default:
+	@just --choose --unsorted 2>/dev/null || true
+
 setup:
 	cd src && terraform init
 
