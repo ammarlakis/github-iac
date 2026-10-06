@@ -3,6 +3,23 @@
   "title": "GitHub repository",
   "type": "object",
   "properties": {
+    "fork": {
+      "type": "object",
+      "description": "Upstream repository to fork. Omit for an original repository.",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*$"
+        },
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+$",
+          "not": {"enum": [".", ".."]}
+        }
+      },
+      "required": ["owner", "repository"],
+      "additionalProperties": false
+    },
     "description": {
       "type": "string",
       "description": "A description of the repository"

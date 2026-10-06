@@ -121,6 +121,28 @@ topics:
 
 The YAML files can be easily updated to reflect changes to the repositories you want to manage, such as updating descriptions, visibility, and topics.
 
+#### Forks
+
+Specify an upstream repository to create or manage a fork:
+
+```yaml
+visibility: public
+fork:
+  owner: devtech-mena
+  repository: devcards.devtech.tools
+```
+
+The YAML filename is the name of the fork in your account. Omit `fork` for original repositories. Forks still use the project's shared repository settings. This requires GitHub provider 6.8 or later within version 6.
+
+For an existing fork, add its YAML and import it before applying:
+
+```bash
+terraform -chdir=src import 'github_repository.create["devcards.devtech.tools"]' devcards.devtech.tools
+terraform -chdir=src import 'github_repository_collaborators.users["devcards.devtech.tools"]' devcards.devtech.tools
+```
+
+Review the plan: changing a fork's upstream can require replacement. The template's optional bulk-import discovery still excludes forks; add them explicitly with their upstream information.
+
 #### Membership
 
 To assign membership in your organiztion, update the `admins` or `members` list with the usernames you want to assign. For example:

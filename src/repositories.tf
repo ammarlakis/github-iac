@@ -8,6 +8,10 @@ resource "github_repository" "create" {
   topics      = try(each.value.topics, [])
   has_issues  = true
 
+  fork         = try(each.value.fork, null) != null
+  source_owner = try(each.value.fork.owner, null)
+  source_repo  = try(each.value.fork.repository, null)
+
   dynamic "pages" {
     for_each = try(each.value.pages, false) != false ? [each.value.pages] : []
     content {
