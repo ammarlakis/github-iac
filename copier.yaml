@@ -9,6 +9,7 @@ _exclude:
   - .svn
   - .cocoindex_code
   - tests
+  - .github/workflows/template-ci.yaml
 
 github_owner:
   type: str

@@ -25,6 +25,8 @@ def terraform(dest, *args):
 for org in [False, True]:
     dest = root / ("organization" if org else "personal")
     subprocess.run(["copier", "copy", "--quiet", "--defaults", "--data", "github_owner=example-owner", "--data", f"organization={str(org).lower()}", "--data", f"import_existing={str(org).lower()}", str(root / "template"), str(dest)], check=True)
+    assert not (dest / ".github/workflows/template-ci.yaml").exists()
+    assert (dest / ".github/workflows/sync-forks.yaml").exists()
     assert not (dest / "tests").exists()
     assert not (dest / ".cocoindex_code").exists()
     json.loads((dest / ".vscode/settings.json").read_text())
