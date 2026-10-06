@@ -1,15 +1,12 @@
+_subdirectory: template
+
 _exclude:
-  - copier.yaml
-  - copier.yml
   - "~*"
   - "*.py[co]"
   - __pycache__
   - .git
   - .DS_Store
   - .svn
-  - .cocoindex_code
-  - tests
-  - .github/workflows/template-ci.yaml
 
 github_owner:
   type: str

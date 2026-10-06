@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class SchemaTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        paths = list((ROOT / "schemas").glob("*.json"))
+        paths = list((ROOT / "template/schemas").glob("*.json"))
         registry = Registry().with_resources((p.as_uri(), Resource.from_contents(json.loads(p.read_text()))) for p in paths)
         cls.validators = {}
         for path in paths:

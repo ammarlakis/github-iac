@@ -1,21 +1,15 @@
 _default:
 	@just --choose --unsorted 2>/dev/null || true
 
-setup:
-	cd src && terraform init
+check:
+	terraform fmt -check template/src
+	bash -n template/scripts/create-repo.sh
 
-update:
-	copier update --skip-answered
-
-plan:
-	cd src && terraform plan -out tfplan
-
-apply args='tfplan':
-	cd src && terraform apply {{args}}
+# Validate schemas, render template variants, and test mocked Terraform plans.
+test: check
+	python3 -m unittest discover -s tests -p 'test_*.py'
+	python3 tests/validate_template.py
 
 fmt:
 	prettier . -w
-	terraform fmt -recursive src
-
-create target:
-	./scripts/create-{{target}}.sh
+	terraform fmt -recursive template/src
