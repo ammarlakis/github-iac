@@ -6,7 +6,16 @@ resource "github_repository" "create" {
   visibility  = each.value.visibility
   description = try(each.value.description, "")
   topics      = try(each.value.topics, [])
-  has_issues  = true
+  has_issues  = try(each.value.has_issues, true)
+
+  has_projects           = try(each.value.has_projects, null)
+  has_wiki               = try(each.value.has_wiki, null)
+  allow_auto_merge       = try(each.value.allow_auto_merge, null)
+  allow_merge_commit     = try(each.value.allow_merge_commit, null)
+  allow_rebase_merge     = try(each.value.allow_rebase_merge, null)
+  allow_squash_merge     = try(each.value.allow_squash_merge, null)
+  delete_branch_on_merge = try(each.value.delete_branch_on_merge, null)
+  homepage_url           = try(each.value.homepage_url, null)
 
   fork         = try(each.value.fork, null) != null
   source_owner = try(each.value.fork.owner, null)

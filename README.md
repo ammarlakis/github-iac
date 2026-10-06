@@ -121,6 +121,28 @@ topics:
 
 The YAML files can be easily updated to reflect changes to the repositories you want to manage, such as updating descriptions, visibility, and topics.
 
+#### Repository settings
+
+Repository YAML supports optional `has_issues`, `has_projects`, `has_wiki`, `homepage_url`, `allow_auto_merge`, `allow_merge_commit`, `allow_rebase_merge`, `allow_squash_merge`, and `delete_branch_on_merge` fields. `has_issues` defaults to `true`; omitted settings otherwise retain the GitHub provider's behavior. Existing repositories do not need to repeat these options.
+
+For example, a repository can use squash-only merging:
+
+```yaml
+# yaml-language-server: $schema=../../schemas/repository.schema.json
+visibility: private
+has_issues: true
+has_projects: false
+has_wiki: false
+homepage_url: ""
+allow_auto_merge: true
+allow_merge_commit: false
+allow_rebase_merge: false
+allow_squash_merge: true
+delete_branch_on_merge: true
+```
+
+The example files and generated repository YAML start with a schema hint. With the recommended Red Hat YAML extension installed, VS Code uses that relative schema path for validation and completion, including when opening a file outside the project workspace. See the [extension's schema association documentation](https://github.com/redhat-developer/vscode-yaml#associating-schemas).
+
 #### Forks
 
 Specify an upstream repository to create or manage a fork:

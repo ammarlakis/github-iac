@@ -36,6 +36,43 @@
       },
       "description": "A list of topics related to the repository"
     },
+    "has_issues": {
+      "type": "boolean",
+      "description": "Enable GitHub Issues. Defaults to true in this template.",
+      "default": true
+    },
+    "has_projects": {
+      "type": "boolean",
+      "description": "Enable GitHub Projects."
+    },
+    "has_wiki": {
+      "type": "boolean",
+      "description": "Enable the repository wiki."
+    },
+    "allow_auto_merge": {
+      "type": "boolean",
+      "description": "Allow automatic merging of pull requests."
+    },
+    "allow_merge_commit": {
+      "type": "boolean",
+      "description": "Allow merge commits."
+    },
+    "allow_rebase_merge": {
+      "type": "boolean",
+      "description": "Allow rebase merging."
+    },
+    "allow_squash_merge": {
+      "type": "boolean",
+      "description": "Allow squash merging."
+    },
+    "delete_branch_on_merge": {
+      "type": "boolean",
+      "description": "Automatically delete head branches after merging."
+    },
+    "homepage_url": {
+      "type": "string",
+      "description": "Repository homepage URL; an empty string clears it."
+    },
     "permissions": {
       "type": "object",
       "properties": {

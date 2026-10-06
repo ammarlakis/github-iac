@@ -64,6 +64,7 @@ fi
 echo -e "\n${YELLOW}Generating $repo_file...${NC}\n"
 
 {
+    echo '# yaml-language-server: $schema=../../schemas/repository.schema.json'
     echo "visibility: $visibility"
     if [[ -n "$description" ]]; then
         echo "description: \"$description\""
