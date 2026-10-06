@@ -4,6 +4,9 @@ _default:
 setup:
 	cd src && terraform init
 
+update:
+	copier update --skip-answered
+
 plan:
 	cd src && terraform plan -out tfplan
 
