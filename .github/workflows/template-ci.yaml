@@ -34,7 +34,7 @@ jobs:
         run: |
           terraform fmt -check src
           bash -n scripts/create-repo.sh
-      - name: Validate schemas and fork-sync behavior
+      - name: Validate schemas
         run: python -m unittest discover -s tests -p 'test_*.py'
       - name: Validate rendered templates and Terraform plans
         run: python tests/validate_template.py

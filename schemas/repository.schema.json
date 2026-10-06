@@ -3,6 +3,11 @@
   "title": "GitHub repository",
   "type": "object",
   "properties": {
+    "preset": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$",
+      "description": "Preset name in data/presets, without the .yaml extension. Repository settings override the preset."
+    },
     "fork": {
       "type": "object",
       "description": "Upstream repository to fork. Omit for an original repository.",
@@ -20,23 +25,6 @@
               ".."
             ]
           }
-        },
-        "sync": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "default": false
-            },
-            "branch": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "enabled"
-          ]
         }
       },
       "required": [
@@ -828,8 +816,17 @@
       }
     }
   },
-  "required": [
-    "visibility"
+  "anyOf": [
+    {
+      "required": [
+        "visibility"
+      ]
+    },
+    {
+      "required": [
+        "preset"
+      ]
+    }
   ],
   "additionalProperties": false
 }

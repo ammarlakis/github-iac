@@ -26,7 +26,8 @@ for org in [False, True]:
     dest = root / ("organization" if org else "personal")
     subprocess.run(["copier", "copy", "--quiet", "--defaults", "--data", "github_owner=example-owner", "--data", f"organization={str(org).lower()}", "--data", f"import_existing={str(org).lower()}", str(root / "template"), str(dest)], check=True)
     assert not (dest / ".github/workflows/template-ci.yaml").exists()
-    assert (dest / ".github/workflows/sync-forks.yaml").exists()
+    assert not (dest / ".github/workflows/sync-forks.yaml").exists()
+    assert not (dest / "scripts/sync-forks.py").exists()
     assert not (dest / "tests").exists()
     assert not (dest / ".cocoindex_code").exists()
     json.loads((dest / ".vscode/settings.json").read_text())
@@ -54,6 +55,9 @@ run "no_opt_in" {
 }
 ''')
     (dest / "data/defaults.yaml").unlink()
+    # Existing generated projects need not have a presets directory.
+    (dest / "data/presets/standard.yaml").unlink()
+    (dest / "data/presets").rmdir()
     terraform(dest, "test", "-no-color")
     (tests / "defaults.tftest.hcl").unlink()
     defaults = {"has_wiki": False, "actions": {"enabled": True, "allowed_actions": "selected", "allowed_actions_config": {"github_owned_allowed": True}, "default_workflow_permissions": "read"}, "pages": {"build_type": "workflow"}, "security": {"vulnerability_alerts": True}, "rulesets": {"baseline": {"rules": {"deletion": True}}}}
@@ -93,4 +97,41 @@ run "configured_features" {
 }
 ''')
     terraform(dest, "test", "-no-color")
+    (tests / "features.tftest.hcl").unlink()
+    (dest / "data/presets").mkdir()
+    shutil.copy(ROOT / "data/presets/standard.yaml", dest / "data/presets/standard.yaml")
+    preset = {"visibility": "private", "has_wiki": True, "topics": ["preset"], "permissions": {"users": {"push": ["contributor"]}}, "actions": {"can_approve_pull_request_reviews": True, "allowed_actions_config": {"github_owned_allowed": False}}, "security": {"dependabot_security_updates": True}, "pages": {"build_type": "legacy", "branch": "gh-pages"}, "rulesets": {"preset": {"rules": {"deletion": True}}}}
+    (dest / "data/presets/custom.yaml").write_text(yaml.safe_dump(preset))
+    (dest / "data/repositories/preset-only.yaml").write_text(yaml.safe_dump({"preset": "standard"}))
+    (dest / "data/repositories/preset-inherited.yaml").write_text(yaml.safe_dump({"preset": "custom"}))
+    (dest / "data/repositories/preset-overridden.yaml").write_text(yaml.safe_dump({"preset": "custom", "visibility": "public", "has_wiki": False, "topics": [], "permissions": {}, "actions": {"enabled": False, "can_approve_pull_request_reviews": False}, "security": {"dependabot_security_updates": False}, "pages": {"path": "/docs"}, "rulesets": {}}))
+    (tests / "presets.tftest.hcl").write_text('''mock_provider "github" {}
+run "presets" {
+  command = plan
+  assert {
+    condition = github_repository.create["preset-only"].visibility == "private" && github_repository.create["preset-only"].allow_squash_merge && !github_repository.create["preset-only"].allow_merge_commit && !contains(keys(github_repository_pages.site), "preset-only")
+    error_message = "A preset must supply repository settings without opting into default Pages."
+  }
+  assert {
+    condition = github_repository.create["preset-inherited"].has_wiki && github_repository.create["preset-overridden"].visibility == "public" && !github_repository.create["preset-overridden"].has_wiki && length(github_repository.create["preset-overridden"].topics) == 0 && length(local.repositories["preset-overridden"].permissions) == 0 && one(github_repository_collaborators.users["preset-inherited"].user).username == "contributor"
+    error_message = "Preset inheritance and repository scalar, list, and permissions replacement failed."
+  }
+  assert {
+    condition = github_actions_repository_permissions.policy["preset-inherited"].enabled && !github_actions_repository_permissions.policy["preset-inherited"].allowed_actions_config[0].github_owned_allowed && github_workflow_repository_permissions.policy["preset-inherited"].default_workflow_permissions == "read" && github_workflow_repository_permissions.policy["preset-inherited"].can_approve_pull_request_reviews && !github_actions_repository_permissions.policy["preset-overridden"].enabled && !github_workflow_repository_permissions.policy["preset-overridden"].can_approve_pull_request_reviews
+    error_message = "Actions must merge defaults, presets, and repository settings, preserving false and replacing nested objects."
+  }
+  assert {
+    condition = github_repository_vulnerability_alerts.policy["preset-inherited"].enabled && github_repository_dependabot_security_updates.policy["preset-inherited"].enabled && !github_repository_dependabot_security_updates.policy["preset-overridden"].enabled
+    error_message = "Security settings must merge across all three layers."
+  }
+  assert {
+    condition = github_repository_pages.site["preset-inherited"].build_type == "legacy" && github_repository_pages.site["preset-inherited"].source[0].branch == "gh-pages" && github_repository_pages.site["preset-overridden"].source[0].path == "/docs" && contains(keys(github_repository_ruleset.policy), "preset-inherited/preset") && !contains(keys(github_repository_ruleset.policy), "preset-inherited/baseline") && !contains(keys(github_repository_ruleset.policy), "preset-overridden/preset")
+    error_message = "Pages must merge across all three layers and rulesets must be replaced."
+  }
+}
+''')
+    terraform(dest, "test", "-no-color")
+    (dest / "data/repositories/missing-preset.yaml").write_text(yaml.safe_dump({"preset": "missing"}))
+    result = subprocess.run(["terraform", f"-chdir={dest / 'src'}", "test", "-no-color"], env=env, capture_output=True, text=True)
+    assert result.returncode != 0 and "Invalid index" in result.stderr, result.stdout + result.stderr
 print(f"Validated templates at {root}")

@@ -6,18 +6,32 @@ locals {
 
   repository_defaults = yamldecode(fileexists("${path.module}/../data/defaults.yaml") ? file("${path.module}/../data/defaults.yaml") : "{}")
 
+  repository_presets = {
+    for file in fileset("${path.module}/../data/presets", "*.yaml") :
+    trimsuffix(file, ".yaml") => yamldecode(file("${path.module}/../data/presets/${file}"))
+  }
+
+  repository_preset_overrides = {
+    for name, repo in local.repository_overrides : name => merge({}, [
+      for preset in [try(repo.preset, null)] : local.repository_presets[preset]
+      if preset != null
+    ]...)
+  }
+
   repositories = {
     for name, repo in local.repository_overrides : name => merge(
       { for key, value in local.repository_defaults : key => value if key != "pages" },
-      repo,
+      local.repository_preset_overrides[name],
+      { for key, value in repo : key => value if key != "preset" },
       {
         for key in ["actions", "security"] : key => merge(
-          try(local.repository_defaults[key], {}), try(repo[key], {})
-        ) if contains(keys(local.repository_defaults), key) || contains(keys(repo), key)
+          try(local.repository_defaults[key], {}), try(local.repository_preset_overrides[name][key], {}), try(repo[key], {})
+        ) if contains(keys(local.repository_defaults), key) || contains(keys(local.repository_preset_overrides[name]), key) || contains(keys(repo), key)
       },
       {
-        for key in ["pages"] : key => merge(try(local.repository_defaults[key], {}), repo[key])
-        if contains(keys(repo), key)
+        for key in ["pages"] : key => merge(
+          try(local.repository_defaults[key], {}), try(local.repository_preset_overrides[name][key], {}), try(repo[key], {})
+        ) if contains(keys(local.repository_preset_overrides[name]), key) || contains(keys(repo), key)
       }
     )
   }
