@@ -9,6 +9,8 @@ This project automates the provisioning and management of GitHub resources using
 - **src/**: This folder contains the Terraform code that defines how GitHub resources are provisioned. The code reads from the `data/` folder to create the necessary resources.
 - **data/repositories/**: Contains YAML files representing the repositories to be provisioned. Each YAML file describes a GitHub repository, with the file name matching the repository name.
 
+- **data/presets/**: Contains reusable repository settings selected with `preset: <name>`.
+
 - **data/teams/**: Contains YAML files representing the teams to be provisioned. Each YAML file describes a GitHub team, with the file name matching the team name.
 
 - **data/membership.yaml**: A YAML file that assigns users to roles in the organization.
@@ -29,6 +31,8 @@ This project automates the provisioning and management of GitHub resources using
 │   ├── terraform.tf
 │   └── variables.tf
 ├── data/
+│   ├── presets
+│   │   └── standard.yaml           # Reusable repository settings
 │   ├── repositories
 │   │   ├── my-awesome-repo.yaml    # YAML file representing a GitHub repository
 │   │   └── another-repo.yaml       # YAML file for another repository
@@ -38,6 +42,7 @@ This project automates the provisioning and management of GitHub resources using
 │   └── membership.yaml             # YAML file containing organization membership assignment
 ├── schemas/
 │   ├── repository.schema.json      # JSON schema for validating repository YAML files
+│   ├── repository-preset.schema.json # JSON schema for repository presets
 │   ├── membership.schema.json      # JSON schema for validating membership YAML file
 │   └── team.schema.json            # JSON schema for validating team YAML files
 ├── .vscode/
@@ -165,9 +170,35 @@ terraform -chdir=src import 'github_repository_collaborators.users["devcards.dev
 
 Review the plan: changing a fork's upstream can require replacement. The template's optional bulk-import discovery still excludes forks; add them explicitly with their upstream information.
 
+#### Repository presets
+
+Define reusable repository settings in `data/presets/<name>.yaml`. For example, `data/presets/standard.yaml`:
+
+```yaml
+# yaml-language-server: $schema=../../schemas/repository-preset.schema.json
+visibility: private
+allow_squash_merge: true
+allow_merge_commit: false
+allow_rebase_merge: false
+delete_branch_on_merge: true
+```
+
+Select it in `data/repositories/my-awesome-repo.yaml` using the name without `.yaml`:
+
+```yaml
+# yaml-language-server: $schema=../../schemas/repository.schema.json
+preset: standard
+description: "This is an awesome repository"
+has_wiki: false
+```
+
+Settings apply in this order: `data/defaults.yaml`, the selected preset, then repository settings. A preset can contain any repository setting except `preset`; it can supply `visibility`, so the repository file can omit it. Presets may also omit `visibility` if the repository supplies it. Referencing a missing preset fails the Terraform plan.
+
+The `actions`, `security`, and `pages` objects merge one level deep across all three layers. Other values, including lists, `permissions`, nested objects, and the entire `rulesets` map, are replaced by the later layer. Use `rulesets: {}` to clear inherited rulesets. Pages defaults apply only when the preset or repository includes a `pages` object.
+
 #### Shared defaults, Actions, and Pages
 
-Use `data/defaults.yaml` for shared repository settings. Repository YAML overrides those values. `actions` and `security` objects merge one level deep; nested objects and the entire `rulesets` map are replaced when specified on a repository. Use `rulesets: {}` to opt out of inherited rulesets. Omitted settings are not managed by the new policy resources.
+Use `data/defaults.yaml` for shared repository settings. Presets and repository YAML override those values. `actions` and `security` objects merge one level deep; nested objects and the entire `rulesets` map are replaced when specified on a repository. Use `rulesets: {}` to opt out of inherited rulesets. Omitted settings are not managed by the new policy resources.
 
 ```yaml
 # yaml-language-server: $schema=../schemas/repository-defaults.schema.json
@@ -242,27 +273,6 @@ security:
 ```
 
 The template also supports `advanced_security`, `code_security`, `secret_scanning_ai_detection`, and `secret_scanning_non_provider_patterns`. Omit `advanced_security` on public repositories, where GitHub already enables it. Availability depends on GitHub licensing, repository visibility, and organization policy. Dependabot security updates require vulnerability alerts. Explicit `false` disables a managed feature; omission leaves it unmanaged unless inherited from defaults. Alerts and Dependabot updates use dedicated Terraform resources. These features require GitHub provider 6.13 or later within version 6.
-
-#### Fork synchronization
-
-Forks are not synced automatically unless enabled in their own YAML:
-
-```yaml
-# yaml-language-server: $schema=../../schemas/repository.schema.json
-visibility: public
-fork:
-  owner: upstream-owner
-  repository: upstream-repo
-  sync:
-    enabled: true
-    branch: main
-```
-
-Preview with `python scripts/sync-forks.py`; add `--repository my-fork` to select one fork. Install `PyYAML>=6,<7` and GitHub CLI locally. `--apply` performs the sync and requires `GH_TOKEN` (or `GITHUB_TOKEN`) with write access to the selected forks. The optional branch is used in both repositories; without it, GitHub CLI uses the upstream default branch.
-
-When template Actions are enabled, the generated `sync-forks.yaml` workflow runs daily at 04:17 UTC and on manual dispatch. Set the controller repository's `FORK_SYNC_TOKEN` Actions secret to a token scoped to the opted-in destination forks, with Contents write access (and Workflows write when syncing workflow files). Its built-in token cannot write to other repositories. A run with no opted-in forks does nothing and needs no sync token.
-
-Syncing uses [GitHub CLI's fast-forward-only behavior](https://cli.github.com/manual/gh_repo_sync), never `--force`. Divergence, permission failures, or ruleset restrictions fail the run for review while allowing the remaining configured forks to be attempted. It does not automatically merge conflicts, rebase commits, or bypass protections. `fork.sync` cannot be set through shared defaults.
 
 #### Membership
 
