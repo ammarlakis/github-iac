@@ -1,0 +1,3 @@
+# yaml-language-server: $schema=../schemas/repository-defaults.schema.json
+# Optional shared settings. Pages defaults apply only to repositories with a pages object.
+{}

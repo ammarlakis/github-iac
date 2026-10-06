@@ -14,10 +14,35 @@
         "repository": {
           "type": "string",
           "pattern": "^[A-Za-z0-9_.-]+$",
-          "not": {"enum": [".", ".."]}
+          "not": {
+            "enum": [
+              ".",
+              ".."
+            ]
+          }
+        },
+        "sync": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "branch": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "enabled"
+          ]
         }
       },
-      "required": ["owner", "repository"],
+      "required": [
+        "owner",
+        "repository"
+      ],
       "additionalProperties": false
     },
     "description": {
@@ -26,7 +51,11 @@
     },
     "visibility": {
       "type": "string",
-      "enum": ["private", "public", "internal"],
+      "enum": [
+        "private",
+        "public",
+        "internal"
+      ],
       "description": "The visibility level of the repository"
     },
     "topics": {
@@ -163,7 +192,10 @@
       "properties": {
         "build_type": {
           "type": "string",
-          "enum": ["workflow", "legacy"],
+          "enum": [
+            "workflow",
+            "legacy"
+          ],
           "default": "workflow",
           "description": "The type of build (workflow or legacy)"
         },
@@ -178,14 +210,626 @@
         },
         "path": {
           "type": "string",
-          "enum": ["/", "/docs"],
+          "enum": [
+            "/",
+            "/docs"
+          ],
           "default": "/",
           "description": "The path to deploy from (/ or /docs)"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true
         }
       },
       "additionalProperties": false
+    },
+    "actions": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "allowed_actions": {
+          "type": "string",
+          "enum": [
+            "all",
+            "local_only",
+            "selected"
+          ]
+        },
+        "allowed_actions_config": {
+          "type": "object",
+          "properties": {
+            "github_owned_allowed": {
+              "type": "boolean"
+            },
+            "verified_allowed": {
+              "type": "boolean"
+            },
+            "patterns_allowed": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "github_owned_allowed"
+          ]
+        },
+        "sha_pinning_required": {
+          "type": "boolean"
+        },
+        "default_workflow_permissions": {
+          "type": "string",
+          "enum": [
+            "read",
+            "write"
+          ]
+        },
+        "can_approve_pull_request_reviews": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "allowed_actions": {
+                "const": "selected"
+              }
+            },
+            "required": [
+              "allowed_actions"
+            ]
+          },
+          "then": {
+            "required": [
+              "allowed_actions_config"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "allowed_actions": {
+                "enum": [
+                  "all",
+                  "local_only"
+                ]
+              }
+            },
+            "required": [
+              "allowed_actions"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "allowed_actions_config"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "security": {
+      "type": "object",
+      "properties": {
+        "vulnerability_alerts": {
+          "type": "boolean"
+        },
+        "dependabot_security_updates": {
+          "type": "boolean"
+        },
+        "advanced_security": {
+          "type": "boolean"
+        },
+        "code_security": {
+          "type": "boolean"
+        },
+        "secret_scanning": {
+          "type": "boolean"
+        },
+        "secret_scanning_push_protection": {
+          "type": "boolean"
+        },
+        "secret_scanning_ai_detection": {
+          "type": "boolean"
+        },
+        "secret_scanning_non_provider_patterns": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "dependabot_security_updates": {
+                "const": true
+              }
+            },
+            "required": [
+              "dependabot_security_updates"
+            ]
+          },
+          "then": {
+            "properties": {
+              "vulnerability_alerts": {
+                "const": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    "rulesets": {
+      "type": "object",
+      "propertyNames": {
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string",
+            "enum": [
+              "branch",
+              "tag"
+            ]
+          },
+          "enforcement": {
+            "type": "string",
+            "enum": [
+              "active",
+              "disabled",
+              "evaluate"
+            ]
+          },
+          "include": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "exclude": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "bypass_actors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "actor_id": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "actor_type": {
+                  "type": "string",
+                  "enum": [
+                    "Integration",
+                    "OrganizationAdmin",
+                    "RepositoryRole",
+                    "Team",
+                    "DeployKey"
+                  ]
+                },
+                "bypass_mode": {
+                  "type": "string",
+                  "enum": [
+                    "always",
+                    "pull_request"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "actor_type",
+                "bypass_mode"
+              ],
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "actor_type": {
+                        "enum": [
+                          "Integration",
+                          "RepositoryRole",
+                          "Team"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "actor_type"
+                    ]
+                  },
+                  "then": {
+                    "required": [
+                      "actor_id"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          "rules": {
+            "type": "object",
+            "properties": {
+              "creation": {
+                "type": "boolean"
+              },
+              "update": {
+                "type": "boolean"
+              },
+              "deletion": {
+                "type": "boolean"
+              },
+              "non_fast_forward": {
+                "type": "boolean"
+              },
+              "required_linear_history": {
+                "type": "boolean"
+              },
+              "required_signatures": {
+                "type": "boolean"
+              },
+              "update_allows_fetch_and_merge": {
+                "type": "boolean"
+              },
+              "pull_request": {
+                "type": "object",
+                "properties": {
+                  "dismiss_stale_reviews_on_push": {
+                    "type": "boolean"
+                  },
+                  "require_code_owner_review": {
+                    "type": "boolean"
+                  },
+                  "require_last_push_approval": {
+                    "type": "boolean"
+                  },
+                  "required_review_thread_resolution": {
+                    "type": "boolean"
+                  },
+                  "required_approving_review_count": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "allowed_merge_methods": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "merge",
+                        "squash",
+                        "rebase"
+                      ]
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true
+                  }
+                },
+                "additionalProperties": false
+              },
+              "required_status_checks": {
+                "type": "object",
+                "properties": {
+                  "strict_required_status_checks_policy": {
+                    "type": "boolean"
+                  },
+                  "do_not_enforce_on_create": {
+                    "type": "boolean"
+                  },
+                  "required_checks": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "context": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "integration_id": {
+                          "type": "integer",
+                          "minimum": 1
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "context"
+                      ]
+                    },
+                    "minItems": 1
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "required_checks"
+                ]
+              },
+              "required_deployments": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "merge_queue": {
+                "type": "object",
+                "properties": {
+                  "check_response_timeout_minutes": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 360
+                  },
+                  "grouping_strategy": {
+                    "type": "string",
+                    "enum": [
+                      "ALLGREEN",
+                      "HEADGREEN"
+                    ]
+                  },
+                  "max_entries_to_build": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  },
+                  "max_entries_to_merge": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  },
+                  "merge_method": {
+                    "type": "string",
+                    "enum": [
+                      "MERGE",
+                      "SQUASH",
+                      "REBASE"
+                    ]
+                  },
+                  "min_entries_to_merge": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  },
+                  "min_entries_to_merge_wait_minutes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 360
+                  }
+                },
+                "additionalProperties": false
+              },
+              "branch_name_pattern": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "negate": {
+                    "type": "boolean"
+                  },
+                  "operator": {
+                    "type": "string",
+                    "enum": [
+                      "starts_with",
+                      "ends_with",
+                      "contains",
+                      "regex"
+                    ]
+                  },
+                  "pattern": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "operator",
+                  "pattern"
+                ]
+              },
+              "tag_name_pattern": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "negate": {
+                    "type": "boolean"
+                  },
+                  "operator": {
+                    "type": "string",
+                    "enum": [
+                      "starts_with",
+                      "ends_with",
+                      "contains",
+                      "regex"
+                    ]
+                  },
+                  "pattern": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "operator",
+                  "pattern"
+                ]
+              },
+              "commit_message_pattern": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "negate": {
+                    "type": "boolean"
+                  },
+                  "operator": {
+                    "type": "string",
+                    "enum": [
+                      "starts_with",
+                      "ends_with",
+                      "contains",
+                      "regex"
+                    ]
+                  },
+                  "pattern": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "operator",
+                  "pattern"
+                ]
+              },
+              "commit_author_email_pattern": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "negate": {
+                    "type": "boolean"
+                  },
+                  "operator": {
+                    "type": "string",
+                    "enum": [
+                      "starts_with",
+                      "ends_with",
+                      "contains",
+                      "regex"
+                    ]
+                  },
+                  "pattern": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "operator",
+                  "pattern"
+                ]
+              },
+              "committer_email_pattern": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "negate": {
+                    "type": "boolean"
+                  },
+                  "operator": {
+                    "type": "string",
+                    "enum": [
+                      "starts_with",
+                      "ends_with",
+                      "contains",
+                      "regex"
+                    ]
+                  },
+                  "pattern": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "operator",
+                  "pattern"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "minProperties": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "rules"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "target": {
+                  "const": "tag"
+                }
+              },
+              "required": [
+                "target"
+              ]
+            },
+            "then": {
+              "properties": {
+                "rules": {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "pull_request"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "required_status_checks"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "required_deployments"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "merge_queue"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "branch_name_pattern"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
     }
   },
-  "required": ["visibility"],
+  "required": [
+    "visibility"
+  ],
   "additionalProperties": false
 }

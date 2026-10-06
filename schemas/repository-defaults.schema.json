@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Shared repository defaults",
+  "type": "object",
+  "properties": {
+    "has_issues": {
+      "$ref": "repository.schema.json#/properties/has_issues"
+    },
+    "has_projects": {
+      "$ref": "repository.schema.json#/properties/has_projects"
+    },
+    "has_wiki": {
+      "$ref": "repository.schema.json#/properties/has_wiki"
+    },
+    "homepage_url": {
+      "$ref": "repository.schema.json#/properties/homepage_url"
+    },
+    "allow_auto_merge": {
+      "$ref": "repository.schema.json#/properties/allow_auto_merge"
+    },
+    "allow_merge_commit": {
+      "$ref": "repository.schema.json#/properties/allow_merge_commit"
+    },
+    "allow_rebase_merge": {
+      "$ref": "repository.schema.json#/properties/allow_rebase_merge"
+    },
+    "allow_squash_merge": {
+      "$ref": "repository.schema.json#/properties/allow_squash_merge"
+    },
+    "delete_branch_on_merge": {
+      "$ref": "repository.schema.json#/properties/delete_branch_on_merge"
+    },
+    "actions": {
+      "$ref": "repository.schema.json#/properties/actions"
+    },
+    "pages": {
+      "$ref": "repository.schema.json#/properties/pages"
+    },
+    "security": {
+      "$ref": "repository.schema.json#/properties/security"
+    },
+    "rulesets": {
+      "$ref": "repository.schema.json#/properties/rulesets"
+    }
+  },
+  "additionalProperties": false
+}

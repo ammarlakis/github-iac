@@ -22,17 +22,69 @@ resource "github_repository" "create" {
   source_repo  = try(each.value.fork.repository, null)
 
   dynamic "pages" {
-    for_each = try(each.value.pages, false) != false ? [each.value.pages] : []
+    for_each = try(each.value.pages, null) != null && try(each.value.pages.enabled, true) ? [each.value.pages] : []
     content {
       build_type = try(pages.value.build_type, "workflow")
       cname      = try(pages.value.cname, "")
 
-      source {
-        branch = try(pages.value.branch, "master")
-        path   = try(pages.value.path, "/")
+      dynamic "source" {
+        for_each = try(pages.value.build_type, "workflow") == "legacy" ? [pages.value] : []
+        content {
+          branch = try(source.value.branch, "master")
+          path   = try(source.value.path, "/")
+        }
       }
     }
   }
+  dynamic "security_and_analysis" {
+    for_each = length(setintersection(toset(keys(try(each.value.security, {}))), toset(["advanced_security", "code_security", "secret_scanning", "secret_scanning_push_protection", "secret_scanning_ai_detection", "secret_scanning_non_provider_patterns"]))) > 0 ? [each.value.security] : []
+    content {
+      dynamic "advanced_security" {
+        for_each = try(security_and_analysis.value.advanced_security, null) != null ? [security_and_analysis.value.advanced_security] : []
+        content {
+          status = advanced_security.value ? "enabled" : "disabled"
+        }
+      }
+      dynamic "code_security" {
+        for_each = try(security_and_analysis.value.code_security, null) != null ? [security_and_analysis.value.code_security] : []
+        content {
+          status = code_security.value ? "enabled" : "disabled"
+        }
+      }
+      dynamic "secret_scanning" {
+        for_each = try(security_and_analysis.value.secret_scanning, null) != null ? [security_and_analysis.value.secret_scanning] : []
+        content {
+          status = secret_scanning.value ? "enabled" : "disabled"
+        }
+      }
+      dynamic "secret_scanning_push_protection" {
+        for_each = try(security_and_analysis.value.secret_scanning_push_protection, null) != null ? [security_and_analysis.value.secret_scanning_push_protection] : []
+        content {
+          status = secret_scanning_push_protection.value ? "enabled" : "disabled"
+        }
+      }
+      dynamic "secret_scanning_ai_detection" {
+        for_each = try(security_and_analysis.value.secret_scanning_ai_detection, null) != null ? [security_and_analysis.value.secret_scanning_ai_detection] : []
+        content {
+          status = secret_scanning_ai_detection.value ? "enabled" : "disabled"
+        }
+      }
+      dynamic "secret_scanning_non_provider_patterns" {
+        for_each = try(security_and_analysis.value.secret_scanning_non_provider_patterns, null) != null ? [security_and_analysis.value.secret_scanning_non_provider_patterns] : []
+        content {
+          status = secret_scanning_non_provider_patterns.value ? "enabled" : "disabled"
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = each.value.visibility != "public" || try(each.value.security.advanced_security, null) == null
+      error_message = "Advanced Security is always enabled for public repositories; omit security.advanced_security."
+    }
+  }
+
 }
 
 resource "github_repository_collaborators" "users" {

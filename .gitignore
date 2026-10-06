@@ -38,3 +38,7 @@ override.tf.json
 terraform.rc
 # CocoIndex Code (ccc)
 /.cocoindex_code/
+
+# Python tooling caches
+__pycache__/
+*.py[cod]

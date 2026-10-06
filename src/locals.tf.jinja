@@ -1,7 +1,25 @@
 locals {
-  repositories = {
+  repository_overrides = {
     for file in fileset("${path.module}/../data/repositories", "*.yaml") :
     trimsuffix(file, ".yaml") => yamldecode(file("${path.module}/../data/repositories/${file}"))
+  }
+
+  repository_defaults = yamldecode(fileexists("${path.module}/../data/defaults.yaml") ? file("${path.module}/../data/defaults.yaml") : "{}")
+
+  repositories = {
+    for name, repo in local.repository_overrides : name => merge(
+      { for key, value in local.repository_defaults : key => value if key != "pages" },
+      repo,
+      {
+        for key in ["actions", "security"] : key => merge(
+          try(local.repository_defaults[key], {}), try(repo[key], {})
+        ) if contains(keys(local.repository_defaults), key) || contains(keys(repo), key)
+      },
+      {
+        for key in ["pages"] : key => merge(try(local.repository_defaults[key], {}), repo[key])
+        if contains(keys(repo), key)
+      }
+    )
   }
 
   {% if organization %}

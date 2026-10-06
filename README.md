@@ -154,7 +154,7 @@ fork:
   repository: devcards.devtech.tools
 ```
 
-The YAML filename is the name of the fork in your account. Omit `fork` for original repositories. Forks still use the project's shared repository settings. This requires GitHub provider 6.8 or later within version 6.
+The YAML filename is the name of the fork in your account. Omit `fork` for original repositories. Forks still use the project's shared repository settings. This template requires GitHub provider 6.13 or later within version 6.
 
 For an existing fork, add its YAML and import it before applying:
 
@@ -164,6 +164,105 @@ terraform -chdir=src import 'github_repository_collaborators.users["devcards.dev
 ```
 
 Review the plan: changing a fork's upstream can require replacement. The template's optional bulk-import discovery still excludes forks; add them explicitly with their upstream information.
+
+#### Shared defaults, Actions, and Pages
+
+Use `data/defaults.yaml` for shared repository settings. Repository YAML overrides those values. `actions` and `security` objects merge one level deep; nested objects and the entire `rulesets` map are replaced when specified on a repository. Use `rulesets: {}` to opt out of inherited rulesets. Omitted settings are not managed by the new policy resources.
+
+```yaml
+# yaml-language-server: $schema=../schemas/repository-defaults.schema.json
+allow_squash_merge: true
+allow_merge_commit: false
+allow_rebase_merge: false
+actions:
+  enabled: true
+  allowed_actions: selected
+  allowed_actions_config:
+    github_owned_allowed: true
+    verified_allowed: false
+    patterns_allowed: ["my-org/*"]
+  default_workflow_permissions: read
+  can_approve_pull_request_reviews: false
+pages:
+  build_type: workflow
+```
+
+Actions also supports `allowed_actions: all` or `local_only`, disabling Actions with `enabled: false`, and `sha_pinning_required`. Organization policies may further restrict repository permissions. Pages defaults only apply to repositories that declare a `pages` object; they do not create sites for every repository. Use `pages: {}` to opt in, or `pages: {enabled: false}` to disable a configured site. Workflow deployments omit a source branch. Legacy deployments retain `branch` (default `master`) and `path` (default `/`). The existing inline Pages resource is retained for state compatibility.
+
+#### Rulesets
+
+Configure named repository rulesets instead of legacy branch-protection resources:
+
+```yaml
+# yaml-language-server: $schema=../../schemas/repository.schema.json
+visibility: public
+rulesets:
+  main:
+    target: branch
+    enforcement: active
+    include: ["~DEFAULT_BRANCH"]
+    exclude: []
+    rules:
+      deletion: true
+      non_fast_forward: true
+      required_linear_history: true
+      pull_request:
+        required_approving_review_count: 1
+        dismiss_stale_reviews_on_push: true
+        require_code_owner_review: true
+        required_review_thread_resolution: true
+      required_status_checks:
+        strict_required_status_checks_policy: true
+        required_checks:
+          - context: test
+```
+
+Each map key is the ruleset name. Defaults are `target: branch`, `enforcement: active`, and the default branch; tag rulesets default to all tags. Supported rules include creation/update/deletion restrictions, force-push protection, linear history, signatures, pull-request reviews and merge methods, status checks, deployments, merge queues, and branch/tag/commit patterns. `bypass_actors` specifies GitHub actor IDs, types, and bypass modes. The schema lists the supported fields; this is not a generic wrapper for every ruleset API option.
+
+GitHub applies overlapping rulesets together. Plan and account restrictions still apply. Conversation resolution is part of the pull-request rule, unlike the standalone legacy setting. See [GitHub's ruleset comparison](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets) and [migration guidance](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/converting-branch-protections-to-rulesets). Import an existing ruleset by its GitHub ID before applying to avoid creating a duplicate:
+
+```bash
+terraform -chdir=src import 'github_repository_ruleset.policy["my-repo/main"]' my-repo:12345
+```
+
+This template does not delete existing branch protections or convert them automatically.
+
+#### Repository security
+
+Security options are explicit booleans under `security`:
+
+```yaml
+# yaml-language-server: $schema=../../schemas/repository.schema.json
+visibility: public
+security:
+  vulnerability_alerts: true
+  dependabot_security_updates: true
+  secret_scanning: true
+  secret_scanning_push_protection: true
+```
+
+The template also supports `advanced_security`, `code_security`, `secret_scanning_ai_detection`, and `secret_scanning_non_provider_patterns`. Omit `advanced_security` on public repositories, where GitHub already enables it. Availability depends on GitHub licensing, repository visibility, and organization policy. Dependabot security updates require vulnerability alerts. Explicit `false` disables a managed feature; omission leaves it unmanaged unless inherited from defaults. Alerts and Dependabot updates use dedicated Terraform resources. These features require GitHub provider 6.13 or later within version 6.
+
+#### Fork synchronization
+
+Forks are not synced automatically unless enabled in their own YAML:
+
+```yaml
+# yaml-language-server: $schema=../../schemas/repository.schema.json
+visibility: public
+fork:
+  owner: upstream-owner
+  repository: upstream-repo
+  sync:
+    enabled: true
+    branch: main
+```
+
+Preview with `python scripts/sync-forks.py`; add `--repository my-fork` to select one fork. Install `PyYAML>=6,<7` and GitHub CLI locally. `--apply` performs the sync and requires `GH_TOKEN` (or `GITHUB_TOKEN`) with write access to the selected forks. The optional branch is used in both repositories; without it, GitHub CLI uses the upstream default branch.
+
+When template Actions are enabled, the generated `sync-forks.yaml` workflow runs daily at 04:17 UTC and on manual dispatch. Set the controller repository's `FORK_SYNC_TOKEN` Actions secret to a token scoped to the opted-in destination forks, with Contents write access (and Workflows write when syncing workflow files). Its built-in token cannot write to other repositories. A run with no opted-in forks does nothing and needs no sync token.
+
+Syncing uses [GitHub CLI's fast-forward-only behavior](https://cli.github.com/manual/gh_repo_sync), never `--force`. Divergence, permission failures, or ruleset restrictions fail the run for review while allowing the remaining configured forks to be attempted. It does not automatically merge conflicts, rebase commits, or bypass protections. `fork.sync` cannot be set through shared defaults.
 
 #### Membership
 
@@ -258,3 +357,14 @@ I create open-source code and write articles on [my website](https://ammarlakis.
 If you’d like to support my work (or treat my cat to a tuna can!), you can do so here:
 
 [![Buy my cat a tuna can 😸](https://img.buymeacoffee.com/button-api/?text=Buy%20my%20cat%20a%20tuna%20can&emoji=%F0%9F%98%B8&slug=ammarlakis&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://www.buymeacoffee.com/ammarlakis)
+
+## Template development checks
+
+In the `github-iac` template source checkout, install Copier, Terraform, GitHub CLI, PyYAML, and jsonschema, then run:
+
+```bash
+python3 -m unittest discover -s tests -p 'test_*.py'
+python3 tests/validate_template.py
+```
+
+The integration check renders personal and organization templates, validates schema hints, and runs mocked Terraform plans. It downloads providers but makes no GitHub changes. Test files and local search indexes are excluded from generated projects.
