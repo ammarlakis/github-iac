@@ -71,7 +71,7 @@ run "configured_features" {
     error_message = "Fork or shared setting mapping failed."
   }
   assert {
-    condition = length(github_repository.create["example"].pages) == 0 && length(github_repository.create["disabled"].pages) == 0 && github_repository.create["options"].pages[0].build_type == "workflow" && length(github_repository.create["options"].pages[0].source) == 0 && github_repository.create["legacy"].pages[0].source[0].branch == "gh-pages"
+    condition = !contains(keys(github_repository_pages.site), "example") && !contains(keys(github_repository_pages.site), "disabled") && github_repository_pages.site["options"].build_type == "workflow" && github_repository_pages.site["options"].cname == "example.org" && length(github_repository_pages.site["options"].source) == 0 && github_repository_pages.site["legacy"].source[0].branch == "gh-pages" && github_repository_pages.site["legacy"].source[0].path == "/docs"
     error_message = "Pages defaults must require opt-in and respect legacy sources and disabling."
   }
   assert {
