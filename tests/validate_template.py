@@ -13,6 +13,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 root = Path(tempfile.mkdtemp(prefix="github-iac-validation-"))
 shutil.copytree(ROOT, root / "template", ignore=shutil.ignore_patterns(".git", ".cocoindex_code", "__pycache__"))
+(root / "template/maintenance-only.txt").write_text("Must not be copied.\n")
 cache = root / "cache"
 cache.mkdir()
 env = {**os.environ, "TF_PLUGIN_CACHE_DIR": str(cache)}
@@ -29,6 +30,15 @@ for org in [False, True]:
     assert not (dest / ".github/workflows/sync-forks.yaml").exists()
     assert not (dest / "scripts/sync-forks.py").exists()
     assert not (dest / "tests").exists()
+    assert not (dest / "copier.yaml").exists()
+    assert not (dest / "template").exists()
+    assert not (dest / "maintenance-only.txt").exists()
+    assert (dest / "README.md").read_text() == (ROOT / "template/README.md").read_text()
+    justfile = (dest / "Justfile").read_text()
+    assert "copier update --skip-answered" in justfile
+    assert "cd src && terraform init" in justfile
+    assert "{{args}}" in justfile and "{{target}}" in justfile
+    assert "tests/validate_template.py" not in justfile
     assert not (dest / ".cocoindex_code").exists()
     json.loads((dest / ".vscode/settings.json").read_text())
     paths = list((dest / "schemas").glob("*.json"))
@@ -99,7 +109,7 @@ run "configured_features" {
     terraform(dest, "test", "-no-color")
     (tests / "features.tftest.hcl").unlink()
     (dest / "data/presets").mkdir()
-    shutil.copy(ROOT / "data/presets/standard.yaml", dest / "data/presets/standard.yaml")
+    shutil.copy(ROOT / "template/data/presets/standard.yaml", dest / "data/presets/standard.yaml")
     preset = {"visibility": "private", "has_wiki": True, "topics": ["preset"], "permissions": {"users": {"push": ["contributor"]}}, "actions": {"can_approve_pull_request_reviews": True, "allowed_actions_config": {"github_owned_allowed": False}}, "security": {"dependabot_security_updates": True}, "pages": {"build_type": "legacy", "branch": "gh-pages"}, "rulesets": {"preset": {"rules": {"deletion": True}}}}
     (dest / "data/presets/custom.yaml").write_text(yaml.safe_dump(preset))
     (dest / "data/repositories/preset-only.yaml").write_text(yaml.safe_dump({"preset": "standard"}))
@@ -134,4 +144,12 @@ run "presets" {
     (dest / "data/repositories/missing-preset.yaml").write_text(yaml.safe_dump({"preset": "missing"}))
     result = subprocess.run(["terraform", f"-chdir={dest / 'src'}", "test", "-no-color"], env=env, capture_output=True, text=True)
     assert result.returncode != 0 and "Invalid index" in result.stderr, result.stdout + result.stderr
+# Both optional outputs must be omitted when disabled, independently.
+for actions, justfile in [(False, False), (False, True), (True, False)]:
+    dest = root / f"optional-actions-{actions}-justfile-{justfile}"
+    subprocess.run(["copier", "copy", "--quiet", "--defaults", "--data", "github_owner=example-owner", "--data", f"enable_actions={str(actions).lower()}", "--data", f"add_justfile={str(justfile).lower()}", str(root / "template"), str(dest)], check=True)
+    assert (dest / "Justfile").exists() == justfile
+    assert (dest / ".github/workflows/add-repository.yaml").exists() == actions
+    assert not (dest / ".github/workflows/template-ci.yaml").exists()
+    assert not (dest / "maintenance-only.txt").exists()
 print(f"Validated templates at {root}")
