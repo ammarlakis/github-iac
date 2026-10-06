@@ -187,7 +187,7 @@ pages:
   build_type: workflow
 ```
 
-Actions also supports `allowed_actions: all` or `local_only`, disabling Actions with `enabled: false`, and `sha_pinning_required`. Organization policies may further restrict repository permissions. Pages defaults only apply to repositories that declare a `pages` object; they do not create sites for every repository. Use `pages: {}` to opt in, or `pages: {enabled: false}` to disable a configured site. Workflow deployments omit a source branch. Legacy deployments retain `branch` (default `master`) and `path` (default `/`). The existing inline Pages resource is retained for state compatibility.
+Actions also supports `allowed_actions: all` or `local_only`, disabling Actions with `enabled: false`, and `sha_pinning_required`. Organization policies may further restrict repository permissions. Pages defaults only apply to repositories that declare a `pages` object; they do not create sites for every repository. Use `pages: {}` to opt in, or `pages: {enabled: false}` to disable a configured site. Workflow deployments omit a source branch. Legacy deployments retain `branch` (default `master`) and `path` (default `/`). Pages is managed by `github_repository_pages.site`; the repository resource ignores its deprecated inline Pages field.
 
 #### Rulesets
 
@@ -368,3 +368,14 @@ python3 tests/validate_template.py
 ```
 
 The integration check renders personal and organization templates, validates schema hints, and runs mocked Terraform plans. It downloads providers but makes no GitHub changes. Test files and local search indexes are excluded from generated projects.
+
+### Migrating existing Pages sites (v1.6.1)
+
+After updating with Copier, import each existing enabled Pages site before applying:
+
+```sh
+terraform -chdir=src import 'github_repository_pages.site["my-repo"]' my-repo
+terraform -chdir=src plan
+```
+
+Use the repository name for both the instance key and import ID. Repeat for each existing site; new sites do not need importing. Keep the repository resource in state. The `ignore_changes = [pages]` lifecycle setting prevents the old resource from disabling the site during migration. Verify the plan has no Pages deletion or recreation before applying. Once imported, `pages.enabled: false` removes the dedicated resource and disables the site.

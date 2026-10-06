@@ -21,21 +21,6 @@ resource "github_repository" "create" {
   source_owner = try(each.value.fork.owner, null)
   source_repo  = try(each.value.fork.repository, null)
 
-  dynamic "pages" {
-    for_each = try(each.value.pages, null) != null && try(each.value.pages.enabled, true) ? [each.value.pages] : []
-    content {
-      build_type = try(pages.value.build_type, "workflow")
-      cname      = try(pages.value.cname, "")
-
-      dynamic "source" {
-        for_each = try(pages.value.build_type, "workflow") == "legacy" ? [pages.value] : []
-        content {
-          branch = try(source.value.branch, "master")
-          path   = try(source.value.path, "/")
-        }
-      }
-    }
-  }
   dynamic "security_and_analysis" {
     for_each = length(setintersection(toset(keys(try(each.value.security, {}))), toset(["advanced_security", "code_security", "secret_scanning", "secret_scanning_push_protection", "secret_scanning_ai_detection", "secret_scanning_non_provider_patterns"]))) > 0 ? [each.value.security] : []
     content {
@@ -79,6 +64,9 @@ resource "github_repository" "create" {
   }
 
   lifecycle {
+    # Pages is managed by github_repository_pages.site.
+    ignore_changes = [pages]
+
     precondition {
       condition     = each.value.visibility != "public" || try(each.value.security.advanced_security, null) == null
       error_message = "Advanced Security is always enabled for public repositories; omit security.advanced_security."
