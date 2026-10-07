@@ -1,6 +1,6 @@
 # GitHub IAC
 
-A Copier template for managing GitHub repositories, teams, and organization membership with Terraform and YAML. It supports reusable repository presets, rulesets, Actions permissions, Pages, and security settings.
+A Copier template for managing GitHub repositories, teams, and organization membership with Terraform and YAML. It supports local GitHub App registration, encrypted secrets publishing, repository app assignments, reusable repository presets, rulesets, Actions permissions, Pages, and security settings.
 
 Create a project with:
 

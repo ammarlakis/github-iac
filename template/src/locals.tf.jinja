@@ -4,6 +4,11 @@ locals {
     trimsuffix(file, ".yaml") => yamldecode(file("${path.module}/../data/repositories/${file}"))
   }
 
+  apps = {
+    for file in fileset("${path.module}/../data/apps", "*.yaml") :
+    trimsuffix(file, ".yaml") => yamldecode(file("${path.module}/../data/apps/${file}"))
+  }
+
   repository_defaults = yamldecode(fileexists("${path.module}/../data/defaults.yaml") ? file("${path.module}/../data/defaults.yaml") : "{}")
 
   repository_presets = {

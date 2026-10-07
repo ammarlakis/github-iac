@@ -41,6 +41,9 @@
     },
     "rulesets": {
       "$ref": "repository.schema.json#/properties/rulesets"
+    },
+    "apps": {
+      "$ref": "repository.schema.json#/properties/apps"
     }
   },
   "additionalProperties": false

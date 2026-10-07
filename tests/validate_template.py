@@ -59,7 +59,7 @@ for org in [False, True]:
 run "no_opt_in" {
   command = plan
   assert {
-    condition = length(github_repository_ruleset.policy) == 0 && length(github_actions_repository_permissions.policy) == 0 && length(github_repository_vulnerability_alerts.policy) == 0 && length(github_repository_dependabot_security_updates.policy) == 0
+    condition = length(github_app_installation_repository.app) == 0 && length(github_repository_ruleset.policy) == 0 && length(github_actions_repository_permissions.policy) == 0 && length(github_repository_vulnerability_alerts.policy) == 0 && length(github_repository_dependabot_security_updates.policy) == 0
     error_message = "New features must be opt-in."
   }
 }
@@ -111,13 +111,21 @@ run "configured_features" {
     (dest / "data/presets").mkdir()
     shutil.copy(ROOT / "template/data/presets/standard.yaml", dest / "data/presets/standard.yaml")
     preset = {"visibility": "private", "has_wiki": True, "topics": ["preset"], "permissions": {"users": {"push": ["contributor"]}}, "actions": {"can_approve_pull_request_reviews": True, "allowed_actions_config": {"github_owned_allowed": False}}, "security": {"dependabot_security_updates": True}, "pages": {"build_type": "legacy", "branch": "gh-pages"}, "rulesets": {"preset": {"rules": {"deletion": True}}}}
+    (dest / "data/apps").mkdir()
+    (dest / "data/apps/bot.yaml").write_text(yaml.safe_dump({"installation_id": 123456}))
+    (dest / "data/apps/unregistered.yaml").write_text(yaml.safe_dump({"manifest": {"name": "Unused app", "url": "https://example.com"}}))
+    preset["apps"] = ["bot"]
     (dest / "data/presets/custom.yaml").write_text(yaml.safe_dump(preset))
     (dest / "data/repositories/preset-only.yaml").write_text(yaml.safe_dump({"preset": "standard"}))
     (dest / "data/repositories/preset-inherited.yaml").write_text(yaml.safe_dump({"preset": "custom"}))
-    (dest / "data/repositories/preset-overridden.yaml").write_text(yaml.safe_dump({"preset": "custom", "visibility": "public", "has_wiki": False, "topics": [], "permissions": {}, "actions": {"enabled": False, "can_approve_pull_request_reviews": False}, "security": {"dependabot_security_updates": False}, "pages": {"path": "/docs"}, "rulesets": {}}))
+    (dest / "data/repositories/preset-overridden.yaml").write_text(yaml.safe_dump({"preset": "custom", "apps": [], "visibility": "public", "has_wiki": False, "topics": [], "permissions": {}, "actions": {"enabled": False, "can_approve_pull_request_reviews": False}, "security": {"dependabot_security_updates": False}, "pages": {"path": "/docs"}, "rulesets": {}}))
     (tests / "presets.tftest.hcl").write_text('''mock_provider "github" {}
 run "presets" {
   command = plan
+  assert {
+    condition = github_app_installation_repository.app["preset-inherited/bot"].installation_id == "123456" && github_app_installation_repository.app["preset-inherited/bot"].repository == "preset-inherited" && !contains(keys(github_app_installation_repository.app), "preset-overridden/bot")
+    error_message = "App assignments must inherit preset lists, resolve installation IDs, and respect empty repository overrides."
+  }
   assert {
     condition = github_repository.create["preset-only"].visibility == "private" && github_repository.create["preset-only"].allow_squash_merge && !github_repository.create["preset-only"].allow_merge_commit && !contains(keys(github_repository_pages.site), "preset-only")
     error_message = "A preset must supply repository settings without opting into default Pages."

@@ -814,6 +814,15 @@
           }
         ]
       }
+    },
+    "apps": {
+      "type": "array",
+      "description": "Names of installed GitHub Apps declared in data/apps. Replaces defaults and preset lists.",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+      },
+      "uniqueItems": true
     }
   },
   "anyOf": [

@@ -126,6 +126,95 @@ topics:
 
 The YAML files can be easily updated to reflect changes to the repositories you want to manage, such as updating descriptions, visibility, and topics.
 
+#### GitHub Apps and encrypted secrets
+
+App registration starts locally using your GitHub admin login. Install GitHub CLI, age, SOPS, Python, PyYAML, and jsonschema, then run `gh auth login`. GitHub requires browser approval to register and install an app. Bootstrap generates its manifest from YAML, captures the credentials, encrypts them immediately, and records only public app metadata in the controller repository.
+
+Declare an app in `data/apps/github-manager.yaml`:
+
+```yaml
+# yaml-language-server: $schema=../../schemas/app.schema.json
+manifest:
+  name: YOUR-OWNER-github-manager
+  url: https://github.com/YOUR-OWNER/my-github
+  public: false
+  default_permissions:
+    administration: write
+    contents: write
+    workflows: write
+    pages: write
+    vulnerability_alerts: write
+    secrets: write
+  default_events: []
+publisher: true
+secrets:
+  repository: YOUR-OWNER/my-github
+  prefix: GH_MANAGER
+```
+
+Use only the permissions your management workflows need. `publisher: true` configures this app to upload declared repository secrets and requires `secrets: write`. For organization management, add the necessary organization permissions. A manifest describes registration settings; the provider does not reconcile subsequent changes to the app registration itself. Updating permissions requires editing the GitHub App and approving the changed permissions for its installation. See [GitHub's manifest flow](https://docs.github.com/en/apps/sharing-github-apps/registering-a-github-app-from-a-manifest).
+
+Clone the private repository that will hold encrypted credentials. It can be the controller itself if that repository is private:
+
+```sh
+just secrets-init /path/to/my-github YOUR-OWNER/my-github
+just app-bootstrap github-manager /path/to/my-github
+```
+
+Without Just, use `python3 scripts/github-apps.py init-secrets DIRECTORY --repository OWNER/REPO` and `python3 scripts/github-apps.py bootstrap NAME --secrets-directory DIRECTORY`.
+
+Initialization verifies that the GitHub repository is private and matches the checkout's origin, creates an age key outside Git (by default under `~/.config/github-iac/age/`), uploads the private key as the repository's `SOPS_AGE_KEY` Actions secret, and writes `.sops.yaml`, `secrets-config.yaml`, a publishing script, and its workflow. The age public recipient encrypts files; the private key decrypts them in CI. Rerunning initialization reuses the key; it never silently replaces a missing or different key. Keep a secure backup of the private key.
+
+Approve the registration in the browser. The helper saves SOPS-encrypted credentials under `secrets/apps/github-manager.enc.yaml` in the private repository. Plaintext app credentials are not written into the app YAML or command logs. After registration, follow the installation link and grant selected repository access, including the private controller and each destination whose secrets the app should manage. Record the installation ID from the installation settings URL:
+
+```sh
+just app-installation github-manager 12345678 /path/to/my-github
+```
+
+Encrypted documents have this structure when opened in SOPS:
+
+```yaml
+repositories:
+  YOUR-OWNER/destination:
+    secrets:
+      EXAMPLE_TOKEN: "secret value"
+```
+
+Edit them with `SOPS_AGE_KEY_FILE=/path/to/age-key.txt sops edit secrets/apps/github-manager.enc.yaml`. Commit only the encrypted files and public configuration to the private repository. The workflow runs on pushes to `main` or `master`, or manually. It decrypts the inventory, authenticates using the publisher app's encrypted private key, obtains a short-lived token limited to `secrets: write`, uploads destination secrets, and revokes the token. No permanent personal token is needed in Actions. The publisher's own credentials remain in the encrypted inventory and are not copied into additional Actions secrets.
+
+For local preview, set `SOPS_AGE_KEY_FILE` and run `python3 scripts/publish-secrets.py`; add `--apply` to upload. Inventory validation completes before any upload. Removing a declaration does not delete an existing destination secret. An upload failure stops the workflow with an error and may leave earlier successful uploads in place; rerun after fixing access. Every destination must belong to the publisher installation's account and be accessible to that installation.
+
+To adopt a manually registered app, or recover registration after an interrupted callback, use a private key file kept outside Git:
+
+```sh
+python3 scripts/github-apps.py adopt github-manager \
+  --app-id 12345 --slug YOUR-OWNER-github-manager \
+  --private-key-file /secure/path/app.pem \
+  --secrets-directory /path/to/my-github
+```
+
+Optional `--client-secret-file` and `--webhook-secret-file` arguments encrypt those credentials too. An app without a webhook does not require a webhook secret. Adoption records the existing identity and never recreates the app.
+
+Repository files and presets select installed apps by name:
+
+```yaml
+preset: standard
+apps:
+  - github-manager
+```
+
+App lists replace inherited lists; use `apps: []` to opt out. Apps can also be declared with only `installation_id` to manage existing installations without registering a new app. Terraform manages repository assignments through `github_app_installation_repository`, not the app registration. Before applying, initialize Terraform and import any assignments already created during installation:
+
+```sh
+just setup
+just app-import github-manager
+just plan
+```
+
+For a GitHub CLI OAuth login, the installation API also requires `read:user`. If it returns HTTP 403, run `gh auth refresh -h github.com -s read:user` locally. Terraform needs the same user credentials through its provider configuration or `GITHUB_TOKEN`; do not save that personal token in the secrets publishing workflow.
+
+The import helper checks current installation access and imports only existing assignments; Terraform apply creates new assignments. These assignment operations require user authentication (for example your local GitHub CLI login), because the provider resource does not support GitHub App installation authentication. Use App authentication for supported repository operations, and user authentication for installation assignments. [Provider documentation](https://github.com/integrations/terraform-provider-github/blob/main/docs/resources/app_installation_repository.md).
+
 #### Repository settings
 
 Repository YAML supports optional `has_issues`, `has_projects`, `has_wiki`, `homepage_url`, `allow_auto_merge`, `allow_merge_commit`, `allow_rebase_merge`, `allow_squash_merge`, and `delete_branch_on_merge` fields. `has_issues` defaults to `true`; omitted settings otherwise retain the GitHub provider's behavior. Existing repositories do not need to repeat these options.

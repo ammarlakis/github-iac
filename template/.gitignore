@@ -42,3 +42,12 @@ terraform.rc
 # Python tooling caches
 __pycache__/
 *.py[cod]
+
+# Local credentials must remain outside version control.
+*.pem
+*.agekey
+age-keys.txt
+# Commit only SOPS-encrypted secret inventory files.
+/secrets/**
+!/secrets/**/
+!/secrets/**/*.enc.yaml

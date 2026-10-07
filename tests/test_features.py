@@ -40,6 +40,18 @@ class SchemaTests(unittest.TestCase):
             with self.subTest(data=data):
                 self.assertFalse(preset_validator.is_valid(data))
 
+    def test_apps(self):
+        self.validate({"preset": "standard", "apps": ["bot"]})
+        self.validators["repository-preset.schema"].validate({"apps": []})
+        self.validators["repository-defaults.schema"].validate({"apps": ["bot"]})
+        validator = self.validators["app.schema"]
+        validator.validate({"installation_id": 123})
+        validator.validate({"manifest": {"name": "Bot", "url": "https://example.com", "default_permissions": {"contents": "read"}}, "publisher": False})
+        for data in [{}, {"installation_id": -1}, {"manifest": {"name": "Bot"}}, {"manifest": {"name": "Bot", "url": "http://example.com"}}, {"installation_id": 1, "pem": "plaintext"}]:
+            with self.subTest(data=data):
+                self.assertFalse(validator.is_valid(data))
+        self.assertFalse(self.validators["repository.schema"].is_valid({"visibility": "private", "apps": ["bot", "bot"]}))
+
     def test_invalid_options(self):
         invalid = [
             {"actions": {"allowed_actions": "anything"}},
