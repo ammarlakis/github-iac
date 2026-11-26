@@ -133,6 +133,7 @@ class PublisherTests(unittest.TestCase):
                 publisher.encrypted_document(path)
             run.assert_not_called()
 
+    @patch.dict(publisher.os.environ, {"GITHUB_ACTIONS": "true", "GITHUB_REPOSITORY": "owner/vault"})
     def test_publishing_token_used_only_for_destinations_and_revoked(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
