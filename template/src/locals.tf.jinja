@@ -1,14 +1,19 @@
 locals {
   repository_overrides = {
-    for file in fileset("${path.module}/../data/repositories", "*.yaml") :
-    trimsuffix(file, ".yaml") => yamldecode(file("${path.module}/../data/repositories/${file}"))
+    for file, document in data.jsonschema_validator.repository :
+    trimsuffix(file, ".yaml") => jsondecode(document.valid_json)
   }
 
-  repository_defaults = yamldecode(fileexists("${path.module}/../data/defaults.yaml") ? file("${path.module}/../data/defaults.yaml") : "{}")
+  apps = {
+    for file in fileset("${path.module}/../data/apps", "*.yaml") :
+    trimsuffix(file, ".yaml") => yamldecode(file("${path.module}/../data/apps/${file}"))
+  }
+
+  repository_defaults = jsondecode(try(data.jsonschema_validator.defaults[0].valid_json, "{}"))
 
   repository_presets = {
-    for file in fileset("${path.module}/../data/presets", "*.yaml") :
-    trimsuffix(file, ".yaml") => yamldecode(file("${path.module}/../data/presets/${file}"))
+    for file, document in data.jsonschema_validator.preset :
+    trimsuffix(file, ".yaml") => jsondecode(document.valid_json)
   }
 
   repository_preset_overrides = {

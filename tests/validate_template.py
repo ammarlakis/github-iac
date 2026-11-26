@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import tempfile
 
-from jsonschema import Draft7Validator
+from jsonschema.validators import validator_for
 from referencing import Registry, Resource
 import yaml
 
@@ -41,14 +41,14 @@ for org in [False, True]:
     assert "tests/validate_template.py" not in justfile
     assert not (dest / ".cocoindex_code").exists()
     json.loads((dest / ".vscode/settings.json").read_text())
-    paths = list((dest / "schemas").glob("*.json"))
+    paths = list((dest / "schemas").rglob("*.json"))
     registry = Registry().with_resources((p.as_uri(), Resource.from_contents(json.loads(p.read_text()))) for p in paths)
     for path in (dest / "data").rglob("*.yaml"):
         hint = path.read_text().splitlines()[0]
         assert hint.startswith("# yaml-language-server: $schema="), path
         schema_path = (path.parent / hint.split("=", 1)[1]).resolve()
         schema = json.loads(schema_path.read_text())
-        Draft7Validator({**schema, "$id": schema_path.as_uri()}, registry=registry).validate(yaml.safe_load(path.read_text()))
+        validator_for(schema)({**schema, "$id": schema_path.as_uri()}, registry=registry).validate(yaml.safe_load(path.read_text()))
     terraform(dest, "init", "-backend=false", "-input=false", "-no-color")
     terraform(dest, "validate", "-no-color")
     if org:
@@ -59,7 +59,7 @@ for org in [False, True]:
 run "no_opt_in" {
   command = plan
   assert {
-    condition = length(github_repository_ruleset.policy) == 0 && length(github_actions_repository_permissions.policy) == 0 && length(github_repository_vulnerability_alerts.policy) == 0 && length(github_repository_dependabot_security_updates.policy) == 0
+    condition = length(github_app_installation_repository.app) == 0 && length(github_repository_ruleset.policy) == 0 && length(github_actions_repository_permissions.policy) == 0 && length(github_repository_vulnerability_alerts.policy) == 0 && length(github_repository_dependabot_security_updates.policy) == 0
     error_message = "New features must be opt-in."
   }
 }
@@ -111,13 +111,21 @@ run "configured_features" {
     (dest / "data/presets").mkdir()
     shutil.copy(ROOT / "template/data/presets/standard.yaml", dest / "data/presets/standard.yaml")
     preset = {"visibility": "private", "has_wiki": True, "topics": ["preset"], "permissions": {"users": {"push": ["contributor"]}}, "actions": {"can_approve_pull_request_reviews": True, "allowed_actions_config": {"github_owned_allowed": False}}, "security": {"dependabot_security_updates": True}, "pages": {"build_type": "legacy", "branch": "gh-pages"}, "rulesets": {"preset": {"rules": {"deletion": True}}}}
+    (dest / "data/apps").mkdir()
+    (dest / "data/apps/bot.yaml").write_text(yaml.safe_dump({"installation_id": 123456}))
+    (dest / "data/apps/unregistered.yaml").write_text(yaml.safe_dump({"manifest": {"name": "Unused app", "url": "https://example.com"}}))
+    preset["apps"] = ["bot"]
     (dest / "data/presets/custom.yaml").write_text(yaml.safe_dump(preset))
     (dest / "data/repositories/preset-only.yaml").write_text(yaml.safe_dump({"preset": "standard"}))
     (dest / "data/repositories/preset-inherited.yaml").write_text(yaml.safe_dump({"preset": "custom"}))
-    (dest / "data/repositories/preset-overridden.yaml").write_text(yaml.safe_dump({"preset": "custom", "visibility": "public", "has_wiki": False, "topics": [], "permissions": {}, "actions": {"enabled": False, "can_approve_pull_request_reviews": False}, "security": {"dependabot_security_updates": False}, "pages": {"path": "/docs"}, "rulesets": {}}))
+    (dest / "data/repositories/preset-overridden.yaml").write_text(yaml.safe_dump({"preset": "custom", "apps": [], "visibility": "public", "has_wiki": False, "topics": [], "permissions": {}, "actions": {"enabled": False, "can_approve_pull_request_reviews": False}, "security": {"dependabot_security_updates": False}, "pages": {"path": "/docs"}, "rulesets": {}}))
     (tests / "presets.tftest.hcl").write_text('''mock_provider "github" {}
 run "presets" {
   command = plan
+  assert {
+    condition = github_app_installation_repository.app["preset-inherited/bot"].installation_id == "123456" && github_app_installation_repository.app["preset-inherited/bot"].repository == "preset-inherited" && !contains(keys(github_app_installation_repository.app), "preset-overridden/bot")
+    error_message = "App assignments must inherit preset lists, resolve installation IDs, and respect empty repository overrides."
+  }
   assert {
     condition = github_repository.create["preset-only"].visibility == "private" && github_repository.create["preset-only"].allow_squash_merge && !github_repository.create["preset-only"].allow_merge_commit && !contains(keys(github_repository_pages.site), "preset-only")
     error_message = "A preset must supply repository settings without opting into default Pages."
@@ -141,6 +149,31 @@ run "presets" {
 }
 ''')
     terraform(dest, "test", "-no-color")
+    # Defaults can supply visibility and other settings to a repository with no overrides.
+    defaults.update({"visibility": "internal", "description": "Default description", "topics": ["default"], "permissions": {"users": {"pull": ["reader"]}}})
+    (dest / "data/defaults.yaml").write_text(yaml.safe_dump(defaults))
+    (dest / "data/repositories/defaults-only.yaml").write_text("{}\n")
+    (tests / "inherited-defaults.tftest.hcl").write_text('''mock_provider "github" {}
+run "inherited_defaults" {
+  command = plan
+  assert {
+    condition = github_repository.create["defaults-only"].visibility == "internal" && github_repository.create["defaults-only"].description == "Default description" && one(github_repository.create["defaults-only"].topics) == "default" && one(github_repository_collaborators.users["defaults-only"].user).username == "reader"
+    error_message = "A repository must inherit visibility, description, topics, and permissions from defaults."
+  }
+}
+''')
+    terraform(dest, "test", "-no-color")
+    defaults.pop("visibility")
+    (dest / "data/defaults.yaml").write_text(yaml.safe_dump(defaults))
+    result = subprocess.run(["terraform", f"-chdir={dest / 'src'}", "test", "-no-color"], env=env, capture_output=True, text=True)
+    assert result.returncode != 0 and "Set visibility in data/defaults.yaml" in result.stderr, result.stdout + result.stderr
+    defaults["visibility"] = "internal"
+    (dest / "data/defaults.yaml").write_text(yaml.safe_dump(defaults))
+    # Run the real schema provider against an invalid defaults file before merging.
+    (dest / "data/defaults.yaml").write_text(yaml.safe_dump({**defaults, "fork": {"owner": "upstream", "repository": "repo"}}))
+    result = subprocess.run(["terraform", f"-chdir={dest / 'src'}", "test", "-filter=tests/inherited-defaults.tftest.hcl", "-no-color"], env=env, capture_output=True, text=True)
+    assert result.returncode != 0 and "jsonschema_validator.defaults" in result.stderr and "/fork" in result.stderr, result.stdout + result.stderr
+    (dest / "data/defaults.yaml").write_text(yaml.safe_dump(defaults))
     (dest / "data/repositories/missing-preset.yaml").write_text(yaml.safe_dump({"preset": "missing"}))
     result = subprocess.run(["terraform", f"-chdir={dest / 'src'}", "test", "-no-color"], env=env, capture_output=True, text=True)
     assert result.returncode != 0 and "Invalid index" in result.stderr, result.stdout + result.stderr

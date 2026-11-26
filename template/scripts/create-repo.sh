@@ -26,11 +26,10 @@ if [[ -f "$repo_file" ]]; then
 fi
 
 # Visibility
-echo -e "\nVisibility options: public, private"
-read -rp "Visibility [private]: " visibility
-visibility="${visibility:-private}"
-if [[ "$visibility" != "public" && "$visibility" != "private" ]]; then
-    echo "Error: Visibility must be 'public' or 'private'"
+echo -e "\nVisibility options: public, private, internal"
+read -rp "Visibility [inherit]: " visibility
+if [[ -n "$visibility" && "$visibility" != "public" && "$visibility" != "private" && "$visibility" != "internal" ]]; then
+    echo "Error: Visibility must be public, private, internal, or empty"
     exit 1
 fi
 
@@ -65,7 +64,11 @@ echo -e "\n${YELLOW}Generating $repo_file...${NC}\n"
 
 {
     echo '# yaml-language-server: $schema=../../schemas/repository.schema.json'
-    echo "visibility: $visibility"
+    if [[ -n "$visibility" ]]; then
+        echo "visibility: $visibility"
+    elif [[ -z "$description" && ${#topics[@]} -eq 0 ]]; then
+        echo '{}'
+    fi
     if [[ -n "$description" ]]; then
         echo "description: \"$description\""
     fi

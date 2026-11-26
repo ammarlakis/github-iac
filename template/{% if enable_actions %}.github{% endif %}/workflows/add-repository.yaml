@@ -12,13 +12,14 @@ on:
         type: string
         required: false
       visibility:
-        description: The visibility settings of the repository
+        description: Repository visibility (leave blank to inherit)
         type: choice
         options:
+          - ''
           - private
           - public
           - internal
-        required: true
+        required: false
       topics:
         description: Space-separated list of topics
         type: string
@@ -71,6 +72,7 @@ jobs:
             yaml_content+="permissions:\n${permissions_yaml}\n"
           fi
 
+          if [ -z "$yaml_content" ]; then yaml_content='{}'; fi
           echo -e "$yaml_content" > data/repositories/${{ inputs.name }}.yaml
 
       - name: Check for changes

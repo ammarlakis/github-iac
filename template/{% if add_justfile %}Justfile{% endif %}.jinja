@@ -20,4 +20,18 @@ fmt:
 
 create target:
 	./scripts/create-{{target}}.sh
+
+# Initialize private encrypted storage and upload its age key to GitHub.
+secrets-init directory repository:
+	python3 scripts/github-apps.py init-secrets {{quote(directory)}} --repository {{quote(repository)}}
+
+# Register an app from its manifest and encrypt the returned credentials.
+app-bootstrap name secrets_directory:
+	python3 scripts/github-apps.py bootstrap {{quote(name)}} --secrets-directory {{quote(secrets_directory)}}
+
+app-installation name installation_id secrets_directory:
+	python3 scripts/github-apps.py record-installation {{quote(name)}} {{quote(installation_id)}} --secrets-directory {{quote(secrets_directory)}}
+
+app-import name:
+	python3 scripts/github-apps.py import {{quote(name)}}
 {% endraw %}

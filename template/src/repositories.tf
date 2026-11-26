@@ -3,7 +3,7 @@ resource "github_repository" "create" {
 
   name = each.key
 
-  visibility  = each.value.visibility
+  visibility  = try(each.value.visibility, null)
   description = try(each.value.description, "")
   topics      = try(each.value.topics, [])
   has_issues  = try(each.value.has_issues, true)
@@ -68,7 +68,12 @@ resource "github_repository" "create" {
     ignore_changes = [pages]
 
     precondition {
-      condition     = each.value.visibility != "public" || try(each.value.security.advanced_security, null) == null
+      condition     = try(contains(["private", "public", "internal"], each.value.visibility), false)
+      error_message = "Set visibility in data/defaults.yaml, the selected preset, or the repository file."
+    }
+
+    precondition {
+      condition     = try(each.value.visibility, null) != "public" || try(each.value.security.advanced_security, null) == null
       error_message = "Advanced Security is always enabled for public repositories; omit security.advanced_security."
     }
   }
