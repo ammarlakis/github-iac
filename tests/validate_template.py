@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import tempfile
 
-from jsonschema import Draft7Validator
+from jsonschema.validators import validator_for
 from referencing import Registry, Resource
 import yaml
 
@@ -41,14 +41,14 @@ for org in [False, True]:
     assert "tests/validate_template.py" not in justfile
     assert not (dest / ".cocoindex_code").exists()
     json.loads((dest / ".vscode/settings.json").read_text())
-    paths = list((dest / "schemas").glob("*.json"))
+    paths = list((dest / "schemas").rglob("*.json"))
     registry = Registry().with_resources((p.as_uri(), Resource.from_contents(json.loads(p.read_text()))) for p in paths)
     for path in (dest / "data").rglob("*.yaml"):
         hint = path.read_text().splitlines()[0]
         assert hint.startswith("# yaml-language-server: $schema="), path
         schema_path = (path.parent / hint.split("=", 1)[1]).resolve()
         schema = json.loads(schema_path.read_text())
-        Draft7Validator({**schema, "$id": schema_path.as_uri()}, registry=registry).validate(yaml.safe_load(path.read_text()))
+        validator_for(schema)({**schema, "$id": schema_path.as_uri()}, registry=registry).validate(yaml.safe_load(path.read_text()))
     terraform(dest, "init", "-backend=false", "-input=false", "-no-color")
     terraform(dest, "validate", "-no-color")
     if org:
@@ -149,6 +149,26 @@ run "presets" {
 }
 ''')
     terraform(dest, "test", "-no-color")
+    # Defaults can supply visibility and other settings to a repository with no overrides.
+    defaults.update({"visibility": "internal", "description": "Default description", "topics": ["default"], "permissions": {"users": {"pull": ["reader"]}}})
+    (dest / "data/defaults.yaml").write_text(yaml.safe_dump(defaults))
+    (dest / "data/repositories/defaults-only.yaml").write_text("{}\n")
+    (tests / "inherited-defaults.tftest.hcl").write_text('''mock_provider "github" {}
+run "inherited_defaults" {
+  command = plan
+  assert {
+    condition = github_repository.create["defaults-only"].visibility == "internal" && github_repository.create["defaults-only"].description == "Default description" && one(github_repository.create["defaults-only"].topics) == "default" && one(github_repository_collaborators.users["defaults-only"].user).username == "reader"
+    error_message = "A repository must inherit visibility, description, topics, and permissions from defaults."
+  }
+}
+''')
+    terraform(dest, "test", "-no-color")
+    defaults.pop("visibility")
+    (dest / "data/defaults.yaml").write_text(yaml.safe_dump(defaults))
+    result = subprocess.run(["terraform", f"-chdir={dest / 'src'}", "test", "-no-color"], env=env, capture_output=True, text=True)
+    assert result.returncode != 0 and "Set visibility in data/defaults.yaml" in result.stderr, result.stdout + result.stderr
+    defaults["visibility"] = "internal"
+    (dest / "data/defaults.yaml").write_text(yaml.safe_dump(defaults))
     (dest / "data/repositories/missing-preset.yaml").write_text(yaml.safe_dump({"preset": "missing"}))
     result = subprocess.run(["terraform", f"-chdir={dest / 'src'}", "test", "-no-color"], env=env, capture_output=True, text=True)
     assert result.returncode != 0 and "Invalid index" in result.stderr, result.stdout + result.stderr

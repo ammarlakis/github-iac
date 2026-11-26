@@ -281,7 +281,7 @@ description: "This is an awesome repository"
 has_wiki: false
 ```
 
-Settings apply in this order: `data/defaults.yaml`, the selected preset, then repository settings. A preset can contain any repository setting except `preset`; it can supply `visibility`, so the repository file can omit it. Presets may also omit `visibility` if the repository supplies it. Referencing a missing preset fails the Terraform plan.
+Settings apply in this order: `data/defaults.yaml`, the selected preset, then repository settings. Presets can contain any repository setting except `preset`; defaults also exclude `fork`, which belongs in a repository file or an explicit preset. A repository can omit `visibility` when defaults or its preset supplies it; Terraform rejects a repository without visibility after merging. A repository file containing `{}` inherits all defaults. Referencing a missing preset fails the Terraform plan.
 
 The `actions`, `security`, and `pages` objects merge one level deep across all three layers. Other values, including lists, `permissions`, nested objects, and the entire `rulesets` map, are replaced by the later layer. Use `rulesets: {}` to clear inherited rulesets. Pages defaults apply only when the preset or repository includes a `pages` object.
 
@@ -291,6 +291,7 @@ Use `data/defaults.yaml` for shared repository settings. Presets and repository 
 
 ```yaml
 # yaml-language-server: $schema=../schemas/repository-defaults.schema.json
+visibility: private
 allow_squash_merge: true
 allow_merge_commit: false
 allow_rebase_merge: false
@@ -394,7 +395,9 @@ membership:
 
 For Visual Studio Code users, automatic validation of YAML files is supported through the [YAML Extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml). Once the extension is installed, the `.vscode/settings.json` file is configured to validate all YAML files in the `data/` folder against the relevant schema found in the `schemas/` folder. Simply install the extension, and VSCode will automatically highlight any validation errors in your YAML files.
 
-Alternatively, you can manually validate YAML files using the [ajv-cli](https://github.com/ajv-validator/ajv-cli).
+Repository, preset, and defaults schemas reference the same reusable settings in `schemas/defs/repository-settings.schema.json`. Only repository files can select a `preset`, and defaults exclude `fork`. They use JSON Schema 2020-12; use an up-to-date YAML extension (YAML language server 1.20.0 or newer).
+
+Alternatively, you can manually validate YAML files using the [ajv-cli](https://github.com/ajv-validator/ajv-cli). For repository schemas, select `--spec=draft2020` and load the shared schemas with `-r 'schemas/defs/*.schema.json'`.
 
 ### 6. Running Terraform
 
