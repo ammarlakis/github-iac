@@ -395,7 +395,7 @@ membership:
 
 For Visual Studio Code users, automatic validation of YAML files is supported through the [YAML Extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml). Once the extension is installed, the `.vscode/settings.json` file is configured to validate all YAML files in the `data/` folder against the relevant schema found in the `schemas/` folder. Simply install the extension, and VSCode will automatically highlight any validation errors in your YAML files.
 
-Repository, preset, and defaults schemas reference the same reusable settings in `schemas/defs/repository-settings.schema.json`. Only repository files can select a `preset`, and defaults exclude `fork`. They use JSON Schema 2020-12; use an up-to-date YAML extension (YAML language server 1.20.0 or newer).
+Repository, preset, and defaults schemas reference the same reusable settings in `schemas/defs/repository-settings.schema.json`. Terraform reads each of these YAML files through the `iilei/jsonschema` provider during planning and merges the validated settings. Run `terraform init` after updating the template to install the provider. Only repository files can select a `preset`, and defaults exclude `fork`. They use JSON Schema 2020-12; use an up-to-date YAML extension (YAML language server 1.20.0 or newer).
 
 Alternatively, you can manually validate YAML files using the [ajv-cli](https://github.com/ajv-validator/ajv-cli). For repository schemas, select `--spec=draft2020` and load the shared schemas with `-r 'schemas/defs/*.schema.json'`.
 

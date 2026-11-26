@@ -169,6 +169,11 @@ run "inherited_defaults" {
     assert result.returncode != 0 and "Set visibility in data/defaults.yaml" in result.stderr, result.stdout + result.stderr
     defaults["visibility"] = "internal"
     (dest / "data/defaults.yaml").write_text(yaml.safe_dump(defaults))
+    # Run the real schema provider against an invalid defaults file before merging.
+    (dest / "data/defaults.yaml").write_text(yaml.safe_dump({**defaults, "fork": {"owner": "upstream", "repository": "repo"}}))
+    result = subprocess.run(["terraform", f"-chdir={dest / 'src'}", "test", "-filter=tests/inherited-defaults.tftest.hcl", "-no-color"], env=env, capture_output=True, text=True)
+    assert result.returncode != 0 and "jsonschema_validator.defaults" in result.stderr and "/fork" in result.stderr, result.stdout + result.stderr
+    (dest / "data/defaults.yaml").write_text(yaml.safe_dump(defaults))
     (dest / "data/repositories/missing-preset.yaml").write_text(yaml.safe_dump({"preset": "missing"}))
     result = subprocess.run(["terraform", f"-chdir={dest / 'src'}", "test", "-no-color"], env=env, capture_output=True, text=True)
     assert result.returncode != 0 and "Invalid index" in result.stderr, result.stdout + result.stderr

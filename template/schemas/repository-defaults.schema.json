@@ -2,10 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Shared repository defaults",
   "$ref": "defs/repository-settings.schema.json",
-  "not": {
-    "required": [
-      "fork"
-    ]
-  },
-  "unevaluatedProperties": false
+  "unevaluatedProperties": false,
+  "properties": {
+    "fork": false
+  }
 }
